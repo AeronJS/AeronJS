@@ -738,6 +738,34 @@ describe("Router - formData schema", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ title: "hello", count: 42, types: ["string", "number"] });
   });
+
+  test("formData schema does not consume body stream - handler can re-read request.formData()", async () => {
+    const router = createRouter();
+    router.post("/upload", {
+      formData: {
+        title: { type: "string", required: true },
+      },
+    }, async (ctx) => {
+      // handler 里重新读取 formData 不应报错
+      const formData = await ctx.request.formData();
+      const file = formData.get("file") as File;
+      return ctx.json({ title: ctx.formData.title, hasFile: file instanceof File, fileName: file?.name });
+    });
+
+    const compiled = router.compile();
+    const handler = (compiled["/upload"] as Record<string, RouteHandler>).POST!;
+
+    const formData = new FormData();
+    formData.append("title", "hello");
+    formData.append("file", new File(["content"], "test.txt", { type: "text/plain" }));
+    const req = new Request("http://localhost:3000/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ title: "hello", hasFile: true, fileName: "test.txt" });
+  });
 });
 
 describe("Router - headers schema", () => {

@@ -10,7 +10,7 @@ import { resolve } from "node:path";
 export interface SandboxPermissions {
   /** 允许执行的工具名称列表，为空表示允许所有 */
   allowedTools?: string[];
-  /** 允许访问的主机列表，为空表示允许所有 */
+  /** 允许访问的主机列表；开启网络访问时必须显式提供 */
   allowedHosts?: string[];
   /** 最大执行时间（毫秒） */
   maxExecutionTime?: number;
@@ -22,7 +22,7 @@ export interface SandboxPermissions {
   allowFileWrite?: boolean;
   /** 是否允许网络访问 */
   allowNetworkAccess?: boolean;
-  /** 允许读写的工作目录 */
+  /** 允许读写的工作目录；开启文件访问时必须显式提供 */
   workingDirectory?: string;
 }
 
@@ -104,7 +104,7 @@ export function createSandbox(permissions: SandboxPermissions): Sandbox {
       return false;
     }
     if (!effectivePermissions.allowedHosts || effectivePermissions.allowedHosts.length === 0) {
-      return true;
+      return false;
     }
     return effectivePermissions.allowedHosts.includes(parsed.hostname);
   }
@@ -117,7 +117,7 @@ export function createSandbox(permissions: SandboxPermissions): Sandbox {
       return false;
     }
     if (!effectivePermissions.workingDirectory) {
-      return true;
+      return false;
     }
     const resolved = resolve(filePath);
     const workDir = resolve(effectivePermissions.workingDirectory);

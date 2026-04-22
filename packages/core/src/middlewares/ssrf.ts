@@ -1,5 +1,7 @@
 // @aeron/core - SSRF 防护
 
+import { lookup } from "node:dns/promises";
+
 /** SSRF 防护配置选项 */
 export interface SSRFOptions {
   /** 允许的域名白名单 */
@@ -22,6 +24,7 @@ const DEFAULT_BLOCKED_V4 = [
 const DEFAULT_BLOCKED_V6 = ["::1/128", "fc00::/7", "fe80::/10"];
 
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
+const LOCALHOST_HOSTS = new Set(["localhost"]);
 
 /**
  * 将 IPv4 字符串转为数值
@@ -127,6 +130,10 @@ function isBlockedIP(ip: string, blockedV4: string[], blockedV6: string[]): bool
   return false;
 }
 
+function isBlockedHostname(hostname: string): boolean {
+  return LOCALHOST_HOSTS.has(hostname.toLowerCase()) || hostname.toLowerCase().endsWith(".localhost");
+}
+
 /**
  * 创建 SSRF 防护守卫
  * @param options - 配置选项
@@ -177,6 +184,10 @@ export function createSSRFGuard(options: SSRFOptions = {}): {
       return { safe: true };
     }
 
+    if (!allowPrivate && isBlockedHostname(hostname)) {
+      return { safe: false, reason: `Blocked hostname: ${hostname}` };
+    }
+
     // 检查 IP 地址
     if (isIPv4(hostname) || isIPv6(hostname)) {
       if (isBlockedIP(hostname, blockedV4, blockedV6)) {
@@ -192,6 +203,23 @@ export function createSSRFGuard(options: SSRFOptions = {}): {
     if (!result.safe) {
       throw new Error(`SSRF blocked: ${result.reason}`);
     }
+
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.replace(/^\[/, "").replace(/\]$/, "");
+    if (!allowedHosts.has(hostname) && !allowPrivate && !isIPv4(hostname) && !isIPv6(hostname)) {
+      const resolved = await lookup(hostname, { all: true, verbatim: true });
+      if (resolved.length === 0) {
+        throw new Error(`SSRF blocked: Unable to resolve hostname: ${hostname}`);
+      }
+
+      const blockedAddress = resolved.find((record) => isBlockedIP(record.address, blockedV4, blockedV6));
+      if (blockedAddress) {
+        throw new Error(
+          `SSRF blocked: Hostname ${hostname} resolved to blocked IP ${blockedAddress.address}`,
+        );
+      }
+    }
+
     return fetch(url, init);
   }
 

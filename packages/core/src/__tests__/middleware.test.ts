@@ -141,10 +141,10 @@ describe("compose", () => {
 
   test("middleware receives correct context", async () => {
     const ctx = makeCtx();
-    ctx.state.set("key", "value");
+    ctx.state.key = "value";
 
     const mw: Middleware = async (c, next) => {
-      expect(c.state.get("key")).toBe("value");
+      expect(c.state.key).toBe("value");
       return await next();
     };
 

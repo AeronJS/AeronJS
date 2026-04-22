@@ -5,6 +5,9 @@
  * 所有工具必须显式注册，禁止任意执行未注册函数。
  */
 
+import Ajv from "ajv";
+import type { ErrorObject, ValidateFunction } from "ajv";
+
 /** 工具参数定义 */
 export interface ToolParameter {
   /** 参数名称 */
@@ -120,6 +123,15 @@ const PARAM_TYPE_MAP: Record<ToolParameter["type"], string> = {
   array: "array",
 };
 
+interface ToolObjectSchema {
+  type: "object";
+  properties: Record<string, Record<string, unknown>>;
+  required?: string[];
+  additionalProperties: false;
+}
+
+const ajv = new Ajv({ allErrors: true });
+
 /**
  * 校验单个参数值是否符合期望类型
  * @param value - 参数值
@@ -141,21 +153,85 @@ function validateParamType(value: unknown, expectedType: ToolParameter["type"]):
   }
 }
 
+function buildToolObjectSchema(tool: ToolDefinition): ToolObjectSchema {
+  const properties: Record<string, Record<string, unknown>> = {};
+  const required: string[] = [];
+
+  for (const param of tool.parameters) {
+    const prop: Record<string, unknown> = {
+      type: PARAM_TYPE_MAP[param.type],
+      description: param.description,
+    };
+    if (param.schema) {
+      Object.assign(prop, param.schema);
+    }
+    properties[param.name] = prop;
+
+    if (param.required) {
+      required.push(param.name);
+    }
+  }
+
+  return {
+    type: "object",
+    properties,
+    additionalProperties: false,
+    ...(required.length > 0 ? { required } : {}),
+  };
+}
+
+function formatValidationErrors(errors: ErrorObject[] | null | undefined): string[] {
+  if (!errors || errors.length === 0) {
+    return [];
+  }
+
+  return errors.map((error) => {
+    if (error.keyword === "required") {
+      const missingProperty =
+        typeof error.params === "object" &&
+        error.params !== null &&
+        "missingProperty" in error.params
+          ? String((error.params as { missingProperty: unknown }).missingProperty)
+          : "unknown";
+      return `Missing required parameter: ${missingProperty}`;
+    }
+
+    if (error.keyword === "additionalProperties") {
+      const additionalProperty =
+        typeof error.params === "object" &&
+        error.params !== null &&
+        "additionalProperty" in error.params
+          ? String((error.params as { additionalProperty: unknown }).additionalProperty)
+          : "unknown";
+      return `Unexpected parameter: ${additionalProperty}`;
+    }
+
+    const path = error.instancePath.replace(/^\//, "").replace(/\//g, ".");
+    const label = path.length > 0 ? `Parameter "${path}"` : "Parameters";
+    return `${label} ${error.message ?? "are invalid"}`;
+  });
+}
+
 /**
  * 创建工具注册表实例
  * @returns ToolRegistry 实例
  */
 export function createToolRegistry(): ToolRegistry {
   const tools = new Map<string, ToolDefinition>();
+  const validators = new Map<string, ValidateFunction<Record<string, unknown>>>();
 
   function register(tool: ToolDefinition): void {
     if (tools.has(tool.name)) {
       throw new Error(`Tool "${tool.name}" is already registered`);
     }
+
+    const validator = ajv.compile<Record<string, unknown>>(buildToolObjectSchema(tool));
     tools.set(tool.name, tool);
+    validators.set(tool.name, validator);
   }
 
   function unregister(name: string): boolean {
+    validators.delete(name);
     return tools.delete(name);
   }
 
@@ -176,6 +252,11 @@ export function createToolRegistry(): ToolRegistry {
       return { valid: false, errors: [`Tool "${name}" not found`] };
     }
 
+    const validator = validators.get(name);
+    if (!validator) {
+      return { valid: false, errors: [`Tool "${name}" validator not found`] };
+    }
+
     const errors: string[] = [];
 
     for (const param of tool.parameters) {
@@ -193,7 +274,16 @@ export function createToolRegistry(): ToolRegistry {
       }
     }
 
-    return { valid: errors.length === 0, errors };
+    if (errors.length > 0) {
+      return { valid: false, errors };
+    }
+
+    const valid = validator(params);
+    if (!valid) {
+      return { valid: false, errors: formatValidationErrors(validator.errors) };
+    }
+
+    return { valid: true, errors: [] };
   }
 
   async function execute(
@@ -261,32 +351,12 @@ export function createToolRegistry(): ToolRegistry {
     parameters: { type: "object"; properties: Record<string, unknown>; required?: string[] };
   }> {
     return list().map((tool) => {
-      const properties: Record<string, unknown> = {};
-      const required: string[] = [];
-
-      for (const param of tool.parameters) {
-        const prop: Record<string, unknown> = {
-          type: PARAM_TYPE_MAP[param.type],
-          description: param.description,
-        };
-        if (param.schema) {
-          Object.assign(prop, param.schema);
-        }
-        properties[param.name] = prop;
-
-        if (param.required) {
-          required.push(param.name);
-        }
-      }
+      const schema = buildToolObjectSchema(tool);
 
       return {
         name: tool.name,
         description: tool.description,
-        parameters: {
-          type: "object" as const,
-          properties,
-          ...(required.length > 0 ? { required } : {}),
-        },
+        parameters: schema,
       };
     });
   }

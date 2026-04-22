@@ -14,7 +14,7 @@ const okHandler = (ctx: ReturnType<typeof createContext>) => () =>
 
 describe("rateLimit", () => {
   test("allows requests under limit", async () => {
-    const mw = rateLimit({ max: 5, windowMs: 60_000 });
+    const mw = rateLimit({ max: 5, windowMs: 60_000, trustProxyHeaders: true });
     const ctx = makeCtx();
     const response = await mw(ctx, okHandler(ctx));
     expect(response.status).toBe(200);
@@ -25,7 +25,7 @@ describe("rateLimit", () => {
 
   test("returns 429 when exceeding limit", async () => {
     const store = createMemoryRateLimitStore();
-    const mw = rateLimit({ max: 2, windowMs: 60_000, store });
+    const mw = rateLimit({ max: 2, windowMs: 60_000, store, trustProxyHeaders: true });
 
     for (let i = 0; i < 2; i++) {
       const ctx = makeCtx();
@@ -43,7 +43,7 @@ describe("rateLimit", () => {
 
   test("custom message on 429", async () => {
     const store = createMemoryRateLimitStore();
-    const mw = rateLimit({ max: 1, windowMs: 60_000, store, message: "Slow down" });
+    const mw = rateLimit({ max: 1, windowMs: 60_000, store, message: "Slow down", trustProxyHeaders: true });
 
     const ctx1 = makeCtx();
     await mw(ctx1, okHandler(ctx1));
@@ -57,7 +57,7 @@ describe("rateLimit", () => {
 
   test("different keys are independent", async () => {
     const store = createMemoryRateLimitStore();
-    const mw = rateLimit({ max: 1, windowMs: 60_000, store });
+    const mw = rateLimit({ max: 1, windowMs: 60_000, store, trustProxyHeaders: true });
 
     const ctx1 = makeCtx("1.1.1.1");
     const res1 = await mw(ctx1, okHandler(ctx1));
@@ -87,7 +87,7 @@ describe("rateLimit", () => {
 
   test("window resets after expiry", async () => {
     const store = createMemoryRateLimitStore();
-    const mw = rateLimit({ max: 1, windowMs: 50, store });
+    const mw = rateLimit({ max: 1, windowMs: 50, store, trustProxyHeaders: true });
 
     const ctx1 = makeCtx();
     await mw(ctx1, okHandler(ctx1));
@@ -102,7 +102,7 @@ describe("rateLimit", () => {
 
   test("store reset clears entry", async () => {
     const store = createMemoryRateLimitStore();
-    const mw = rateLimit({ max: 1, windowMs: 60_000, store });
+    const mw = rateLimit({ max: 1, windowMs: 60_000, store, trustProxyHeaders: true });
 
     const ctx1 = makeCtx();
     await mw(ctx1, okHandler(ctx1));
@@ -112,5 +112,18 @@ describe("rateLimit", () => {
     const ctx2 = makeCtx();
     const res = await mw(ctx2, okHandler(ctx2));
     expect(res.status).toBe(200);
+  });
+
+  test("spoofed proxy headers do not create independent buckets by default", async () => {
+    const store = createMemoryRateLimitStore();
+    const mw = rateLimit({ max: 1, windowMs: 60_000, store });
+
+    const ctx1 = makeCtx("1.1.1.1");
+    const res1 = await mw(ctx1, okHandler(ctx1));
+    expect(res1.status).toBe(200);
+
+    const ctx2 = makeCtx("2.2.2.2");
+    const res2 = await mw(ctx2, okHandler(ctx2));
+    expect(res2.status).toBe(429);
   });
 });

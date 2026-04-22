@@ -119,50 +119,75 @@ router.get("/stream", async (ctx) => {
     }
   });
 
-  return new Response(stream, {
-    headers: { "Content-Type": "text/event-stream" }
-  });
+  return ctx.stream(stream, "text/event-stream");
 });
 ```
 
 ## 状态（State）
 
-`ctx.state` 是一个可扩展的对象，用于在中间件之间传递数据：
+`ctx.state` 是一个可扩展的对象，用于在中间件之间传递数据。默认情况下它是 `Record<string, unknown>`，你可以通过**模块扩展**声明自定义字段来获得完整的类型提示：
+
+```typescript
+// types/context.d.ts
+import "@aeron/core";
+
+declare module "@aeron/core" {
+  interface ContextState {
+    user?: { id: string; name: string };
+    tenant?: string;
+  }
+}
+```
+
+然后在中间件和路由中使用：
 
 ```typescript
 // 在认证中间件中设置用户信息
 const authMiddleware: Middleware = async (ctx, next) => {
   const token = ctx.headers.get("authorization")?.replace("Bearer ", "");
   ctx.state.user = await jwt.verify(token!);
-  await next();
+  return next();
 };
 
-// 在路由处理程序中访问
+// 在路由处理程序中访问——有完整类型提示
 router.get("/profile", async (ctx) => {
-  const user = ctx.state.user;
+  const user = ctx.state.user; // 类型：{ id: string; name: string } | undefined
   return ctx.json({ profile: user });
 });
 ```
 
+不同路由使用不同的中间件，因此 `ctx.state` 上的字段是可选的。只有显式注入的中间件才会产生对应的 state 字段。
+
 ## Context 接口
 
 ```typescript
-interface Context<TParams extends Record<string, unknown> = Record<string, string>> {
+interface Context<
+  TParams extends Record<string, unknown> = Record<string, string>,
+  TQuery extends Record<string, unknown> = Record<string, string>,
+  TBody extends Record<string, unknown> = Record<string, unknown>,
+  TFormData extends Record<string, unknown> = Record<string, unknown>,
+> {
   // 请求信息
-  method: string;
-  path: string;
-  params: TParams;
-  query: Record<string, string>;
-  headers: Headers;
-  request: Request;
+  readonly request: Request;
+  readonly url: URL;
+  readonly method: string;
+  readonly path: string;
+  readonly params: TParams;
+  readonly query: TQuery;
+  readonly body: TBody;
+  readonly headers: Headers;
+  readonly formData: TFormData;
+  readonly state: ContextState;
+  readonly startTime: number;
 
-  // 状态
-  state: Record<string, unknown>;
+  user?: unknown;
+  tenant?: unknown;
 
   // 响应辅助
-  json(data: unknown, status?: number, headers?: Record<string, string>): Response;
+  json<T>(data: T, status?: number, headers?: Record<string, string>): TypedResponse<T>;
   text(text: string, status?: number): Response;
   html(html: string, status?: number): Response;
   redirect(url: string, status?: number): Response;
+  stream(body: ReadableStream, contentType?: string): Response;
 }
 ```

@@ -76,7 +76,7 @@ export function apiVersion(options: APIVersionOptions): Middleware {
       );
     }
 
-    ctx.state.set("apiVersion", version);
+    ctx.state.apiVersion = version;
 
     const response = await next();
 

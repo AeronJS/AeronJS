@@ -17,35 +17,35 @@ describe("ipFilter", () => {
   });
 
   test("blocks IP in denylist", async () => {
-    const middleware = ipFilter({ denylist: ["1.2.3.4"] });
+    const middleware = ipFilter({ denylist: ["1.2.3.4"], trustProxyHeaders: true });
     const ctx = createContext(makeReq("1.2.3.4"));
     const response = await middleware(ctx, async () => new Response("ok"));
     expect(response.status).toBe(403);
   });
 
   test("allows IP not in denylist", async () => {
-    const middleware = ipFilter({ denylist: ["1.2.3.4"] });
+    const middleware = ipFilter({ denylist: ["1.2.3.4"], trustProxyHeaders: true });
     const ctx = createContext(makeReq("5.6.7.8"));
     const response = await middleware(ctx, async () => new Response("ok"));
     expect(response.status).toBe(200);
   });
 
   test("allows IP in allowlist", async () => {
-    const middleware = ipFilter({ allowlist: ["1.2.3.4"] });
+    const middleware = ipFilter({ allowlist: ["1.2.3.4"], trustProxyHeaders: true });
     const ctx = createContext(makeReq("1.2.3.4"));
     const response = await middleware(ctx, async () => new Response("ok"));
     expect(response.status).toBe(200);
   });
 
   test("blocks IP not in allowlist", async () => {
-    const middleware = ipFilter({ allowlist: ["1.2.3.4"] });
+    const middleware = ipFilter({ allowlist: ["1.2.3.4"], trustProxyHeaders: true });
     const ctx = createContext(makeReq("5.6.7.8"));
     const response = await middleware(ctx, async () => new Response("ok"));
     expect(response.status).toBe(403);
   });
 
   test("CIDR matching", async () => {
-    const middleware = ipFilter({ allowlist: ["10.0.0.0/8"] });
+    const middleware = ipFilter({ allowlist: ["10.0.0.0/8"], trustProxyHeaders: true });
     const ctx1 = createContext(makeReq("10.1.2.3"));
     const r1 = await middleware(ctx1, async () => new Response("ok"));
     expect(r1.status).toBe(200);
@@ -56,7 +56,7 @@ describe("ipFilter", () => {
   });
 
   test("wildcard matching", async () => {
-    const middleware = ipFilter({ denylist: ["192.168.1.*"] });
+    const middleware = ipFilter({ denylist: ["192.168.1.*"], trustProxyHeaders: true });
     const ctx = createContext(makeReq("192.168.1.100"));
     const response = await middleware(ctx, async () => new Response("ok"));
     expect(response.status).toBe(403);
@@ -89,9 +89,23 @@ describe("ipFilter", () => {
   });
 
   test("custom status code", async () => {
-    const middleware = ipFilter({ denylist: ["1.2.3.4"], statusCode: 451 });
+    const middleware = ipFilter({ denylist: ["1.2.3.4"], statusCode: 451, trustProxyHeaders: true });
     const ctx = createContext(makeReq("1.2.3.4"));
     const response = await middleware(ctx, async () => new Response("ok"));
     expect(response.status).toBe(451);
+  });
+
+  test("ignores spoofed proxy headers by default", async () => {
+    const middleware = ipFilter({ allowlist: ["1.2.3.4"] });
+    const ctx = createContext(makeReq("1.2.3.4"));
+    const response = await middleware(ctx, async () => new Response("ok"));
+    expect(response.status).toBe(403);
+  });
+
+  test("uses proxy headers only when explicitly trusted", async () => {
+    const middleware = ipFilter({ allowlist: ["1.2.3.4"], trustProxyHeaders: true });
+    const ctx = createContext(makeReq("1.2.3.4"));
+    const response = await middleware(ctx, async () => new Response("ok"));
+    expect(response.status).toBe(200);
   });
 });

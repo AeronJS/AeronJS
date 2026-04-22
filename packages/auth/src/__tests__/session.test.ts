@@ -120,6 +120,17 @@ describe("createSessionManager", () => {
       expect(updated).not.toBeNull();
       expect(updated!.expiresAt).toBeGreaterThan(originalExpiry);
     });
+
+    test("does not revive expired sessions", async () => {
+      const { manager } = setup({ ttl: 0 });
+      const session = await manager.create();
+
+      await Bun.sleep(5);
+      await manager.touch(session.id);
+
+      const updated = await manager.get(session.id);
+      expect(updated).toBeNull();
+    });
   });
 
   describe("prefix", () => {

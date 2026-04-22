@@ -118,11 +118,67 @@ describe("ToolRegistry", () => {
     expect(schemas).toHaveLength(1);
     expect(schemas[0]!.name).toBe("test-tool");
     expect(schemas[0]!.parameters.type).toBe("object");
+    expect(schemas[0]!.parameters.additionalProperties).toBe(false);
     expect(schemas[0]!.parameters.properties.query).toEqual({
       type: "string",
       description: "Search query",
     });
     expect(schemas[0]!.parameters.required).toEqual(["query"]);
+  });
+
+  test("validateParams 执行 schema 约束", () => {
+    const registry = createToolRegistry();
+    registry.register(
+      makeTool({
+        parameters: [
+          {
+            name: "input",
+            type: "string",
+            description: "Input value",
+            required: true,
+            schema: { minLength: 3, pattern: "^[a-z]+$" },
+          },
+        ],
+      }),
+    );
+
+    const { valid, errors } = registry.validateParams("test-tool", { input: "A1" });
+    expect(valid).toBe(false);
+    expect(errors.some((error) => error.includes('Parameter "input"'))).toBe(true);
+  });
+
+  test("validateParams 拒绝未声明参数", () => {
+    const registry = createToolRegistry();
+    registry.register(makeTool());
+    const { valid, errors } = registry.validateParams("test-tool", {
+      input: "hello",
+      dangerous: true,
+    });
+    expect(valid).toBe(false);
+    expect(errors[0]).toContain("Unexpected parameter");
+  });
+
+  test("execute 在 schema 不通过时拒绝调用 handler", async () => {
+    const handler = async () => ({ ok: true });
+    const registry = createToolRegistry();
+    registry.register(
+      makeTool({
+        parameters: [
+          {
+            name: "input",
+            type: "string",
+            description: "Input value",
+            required: true,
+            schema: { enum: ["allow"] },
+          },
+        ],
+        handler,
+      }),
+    );
+
+    const result = await registry.execute("test-tool", { input: "deny" });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Parameter "input"');
   });
 
   test("execute 不存在的 tool", async () => {

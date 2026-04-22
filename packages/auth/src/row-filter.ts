@@ -82,6 +82,38 @@ export interface RowFilterClause {
   value: unknown;
 }
 
+const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/;
+
+function assertSafeIdentifier(identifier: string): string {
+  if (!SAFE_IDENTIFIER_PATTERN.test(identifier)) {
+    throw new Error(`Unsafe SQL identifier: ${identifier}`);
+  }
+  return identifier;
+}
+
+function formatSqlLiteral(value: unknown): string {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error("SQL filter value must be a finite number");
+    }
+    return String(value);
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "TRUE" : "FALSE";
+  }
+
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+function isMissingFilterValue(value: unknown): boolean {
+  return value === undefined || (Array.isArray(value) && value.length === 0);
+}
+
 /**
  * 创建行级数据过滤器实例
  * 根据用户/租户上下文自动生成 WHERE 条件，实现数据行级隔离
@@ -129,6 +161,7 @@ export function createRowFilter(): RowFilter {
 
   return {
     addRule(rule: RowFilterRule): void {
+      assertSafeIdentifier(rule.field);
       rules.push(rule);
     },
 
@@ -150,12 +183,23 @@ export function createRowFilter(): RowFilter {
       const filters = this.getFilters(resource, ctx);
       if (filters.length === 0) return "";
 
+      if (filters.some((filter) => isMissingFilterValue(filter.value))) {
+        return "WHERE 1 = 0";
+      }
+
       const conditions = filters.map((f) => {
+        const field = assertSafeIdentifier(f.field);
+
         if (f.operator === "IN" || f.operator === "NOT IN") {
           const vals = Array.isArray(f.value) ? f.value : [f.value];
-          return `${f.field} ${f.operator} (${vals.map((v) => `'${String(v)}'`).join(", ")})`;
+          return `${field} ${f.operator} (${vals.map((v) => formatSqlLiteral(v)).join(", ")})`;
         }
-        return `${f.field} ${f.operator} '${String(f.value)}'`;
+
+        if (f.value === null) {
+          return `${field} ${f.operator === "!=" ? "IS NOT NULL" : "IS NULL"}`;
+        }
+
+        return `${field} ${f.operator} ${formatSqlLiteral(f.value)}`;
       });
 
       return `WHERE ${conditions.join(" AND ")}`;

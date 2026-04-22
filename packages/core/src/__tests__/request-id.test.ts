@@ -17,7 +17,7 @@ describe("requestId", () => {
     const id = response.headers.get("X-Request-Id");
     expect(id).toBeTruthy();
     expect(id!.length).toBe(36); // UUID format
-    expect(ctx.state.get("requestId")).toBe(id);
+    expect(ctx.state.requestId).toBe(id);
   });
 
   test("uses existing header value", async () => {
@@ -25,7 +25,7 @@ describe("requestId", () => {
     const ctx = makeCtx({ "X-Request-Id": "abc-123" });
     const response = await mw(ctx, () => Promise.resolve(ctx.json({ ok: true })));
     expect(response.headers.get("X-Request-Id")).toBe("abc-123");
-    expect(ctx.state.get("requestId")).toBe("abc-123");
+    expect(ctx.state.requestId).toBe("abc-123");
   });
 
   test("custom header name", async () => {
@@ -33,7 +33,7 @@ describe("requestId", () => {
     const ctx = makeCtx({ "X-Trace-Id": "trace-456" });
     const response = await mw(ctx, () => Promise.resolve(ctx.json({ ok: true })));
     expect(response.headers.get("X-Trace-Id")).toBe("trace-456");
-    expect(ctx.state.get("requestId")).toBe("trace-456");
+    expect(ctx.state.requestId).toBe("trace-456");
   });
 
   test("generates ID with custom header name when missing", async () => {

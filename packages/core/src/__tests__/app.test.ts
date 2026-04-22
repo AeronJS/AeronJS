@@ -97,6 +97,24 @@ describe("App HTTP integration", () => {
     expect(await res.json()).toEqual({ message: "hello" });
   });
 
+  test("ctx.json supports custom headers", async () => {
+    const app = createApp();
+    app.router.get("/custom-headers", (ctx) =>
+      ctx.json({ ok: true }, 200, { "X-Custom": "value", "X-Request-Id": "123" }),
+    );
+
+    const port = 40000 + Math.floor(Math.random() * 10000);
+    await app.listen(port);
+    appToClose = app;
+
+    const res = await fetch(`http://localhost:${port}/custom-headers`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Custom")).toBe("value");
+    expect(res.headers.get("X-Request-Id")).toBe("123");
+    expect(res.headers.get("Content-Type")).toBe("application/json");
+    expect(await res.json()).toEqual({ ok: true });
+  });
+
   test("global middleware runs on requests", async () => {
     const app = createApp();
     const headerMw: Middleware = async (_ctx, next) => {

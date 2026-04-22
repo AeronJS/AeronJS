@@ -34,7 +34,7 @@ describe("apiVersion middleware", () => {
   test("uses default version when no header", async () => {
     const ctx = createContext(new Request("http://localhost/test"));
     const _response = await middleware(ctx, async () => new Response("ok"));
-    expect(ctx.state.get("apiVersion")).toBe("1");
+    expect(ctx.state.apiVersion).toBe("1");
   });
 
   test("extracts version from Accept header", async () => {
@@ -44,7 +44,7 @@ describe("apiVersion middleware", () => {
       }),
     );
     await middleware(ctx, async () => new Response("ok"));
-    expect(ctx.state.get("apiVersion")).toBe("2");
+    expect(ctx.state.apiVersion).toBe("2");
   });
 
   test("extracts version from X-API-Version header", async () => {
@@ -54,7 +54,7 @@ describe("apiVersion middleware", () => {
       }),
     );
     await middleware(ctx, async () => new Response("ok"));
-    expect(ctx.state.get("apiVersion")).toBe("2");
+    expect(ctx.state.apiVersion).toBe("2");
   });
 
   test("rejects unsupported version", async () => {

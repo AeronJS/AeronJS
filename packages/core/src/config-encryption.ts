@@ -2,7 +2,7 @@
 
 /** 配置加密器选项 */
 export interface ConfigEncryptionOptions {
-  /** 加密密钥（至少 32 字节） */
+  /** 加密密钥（UTF-8 编码后必须恰好为 32 字节） */
   key: string;
   /** 加密算法 */
   algorithm?: string;
@@ -39,7 +39,11 @@ const ENCRYPTED_PREFIX = "ENC:";
  * @returns ConfigEncryptor 实例
  */
 export function createConfigEncryptor(options: ConfigEncryptionOptions): ConfigEncryptor {
-  const keyBytes = new TextEncoder().encode(options.key.padEnd(32, "0").slice(0, 32));
+  const keyBytes = new TextEncoder().encode(options.key);
+
+  if (keyBytes.byteLength !== 32) {
+    throw new Error("Config encryption key must be exactly 32 bytes when UTF-8 encoded");
+  }
 
   async function getKey(): Promise<CryptoKey> {
     return crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, [

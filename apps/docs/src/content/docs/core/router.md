@@ -264,19 +264,52 @@ router.resource("/users", {
 
 ## 路由分组
 
-将 router 作为另一个 router 的子路由，实现路由分组：
+使用 `router.group()` 创建带前缀的路由分组，分组内的路由会自动拼接前缀，并可统一附加中间件：
 
 ```typescript
-const apiRouter = createRouter();
-const v1Router = createRouter();
-const v2Router = createRouter();
+const router = createRouter();
 
-v1Router.get("/users", handler);
-v2Router.get("/users", newHandler);
+// 基础分组
+router.group("/api/v1", (api) => {
+  api.get("/users", async (ctx) => ctx.json(await getUsers()));
+  api.post("/users", async (ctx) => ctx.json(await createUser(ctx.body), 201));
+  api.get("/users/:id", async (ctx) => ctx.json(await getUser(ctx.params.id)));
+});
 
-// 将子路由挂载到前缀路径
-apiRouter.merge(v1Router);
-apiRouter.merge(v2Router);
+// 嵌套分组
+router.group("/api", (api) => {
+  api.group("/v2", (v2) => {
+    v2.get("/users", async (ctx) => ctx.json(await getUsersV2()));
+  });
+});
+```
+
+分组支持统一附加中间件：
+
+```typescript
+const requireAuth: Middleware = async (ctx, next) => {
+  const token = ctx.headers.get("authorization")?.replace("Bearer ", "");
+  if (!token) return ctx.json({ error: "Unauthorized" }, 401);
+  return next();
+};
+
+// /admin 下的所有路由都需要认证
+router.group("/admin", (admin) => {
+  admin.get("/dashboard", async (ctx) => ctx.json({ stats: {} }));
+  admin.get("/settings", async (ctx) => ctx.json({ config: {} }));
+}, requireAuth);
+```
+
+分组中间件与路由级中间件会按顺序组合：先执行分组中间件，再执行路由中间件。
+
+如果需要将独立创建的 Router 合并到当前 Router，使用 `merge`：
+
+```typescript
+const subRouter = createRouter();
+subRouter.get("/health", async (ctx) => ctx.json({ status: "ok" }));
+
+const mainRouter = createRouter();
+mainRouter.merge(subRouter);
 ```
 
 ## 路由中间件
@@ -319,9 +352,16 @@ interface Router {
   delete<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
   delete<Path extends string>(path: Path, config: RouteConfig<InferParams<Path>>, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
   use(...middleware: Middleware[]): Router;
+  group(prefix: string, callback: (group: Router) => void, ...middleware: Middleware[]): Router;
   resource(prefix: string, handlers: ResourceHandlers, ...middleware: Middleware[]): Router;
   merge(router: Router): Router;
 }
 
-type RouteHandler<TParams extends Record<string, unknown> = Record<string, string>> = (ctx: Context<TParams>) => Response | Promise<Response>;
+type RouteHandler<
+  TParams extends Record<string, unknown> = Record<string, string>,
+  TQuery extends Record<string, unknown> = Record<string, string>,
+  TBody extends Record<string, unknown> = Record<string, unknown>,
+  TFormData extends Record<string, unknown> = Record<string, unknown>,
+  TResponse = unknown,
+> = (ctx: Context<TParams, TQuery, TBody, TFormData>) => Promise<TypedResponse<TResponse> | Response> | TypedResponse<TResponse> | Response;
 ```

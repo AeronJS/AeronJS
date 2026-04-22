@@ -50,10 +50,10 @@ describe("createContext", () => {
     expect(ctx.headers.get("X-Custom")).toBe("test-value");
   });
 
-  test("state is an empty Map", () => {
+  test("state is an empty object", () => {
     const ctx = createContext(makeRequest("http://localhost:3000/"));
-    expect(ctx.state).toBeInstanceOf(Map);
-    expect(ctx.state.size).toBe(0);
+    expect(typeof ctx.state).toBe("object");
+    expect(Object.keys(ctx.state)).toHaveLength(0);
   });
 
   test("startTime is set", () => {

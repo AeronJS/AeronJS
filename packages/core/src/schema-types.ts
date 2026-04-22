@@ -394,7 +394,7 @@ export async function coerceAndValidateFormDataBody(
 ): Promise<{ data: Record<string, unknown>; errors: string[] }> {
   let formData: globalThis.FormData;
   try {
-    formData = (await request.formData()) as globalThis.FormData;
+    formData = (await request.clone().formData()) as globalThis.FormData;
   } catch {
     return { data: {}, errors: ["Failed to parse form data"] };
   }

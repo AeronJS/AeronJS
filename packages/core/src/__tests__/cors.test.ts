@@ -117,4 +117,18 @@ describe("cors", () => {
     const response = await mw(ctx, okHandler(ctx));
     expect(response.headers.get("Access-Control-Expose-Headers")).toBe("X-Custom");
   });
+
+  test("origin with trailing slash matches request origin without trailing slash", async () => {
+    const mw = cors({ origin: "http://localhost:4321/" });
+    const ctx = makeCtx("GET", { origin: "http://localhost:4321" });
+    const response = await mw(ctx, okHandler(ctx));
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:4321");
+  });
+
+  test("array origin with trailing slash entries match normalized request origin", async () => {
+    const mw = cors({ origin: ["http://a.com/", "http://localhost:4321/"] });
+    const ctx = makeCtx("GET", { origin: "http://localhost:4321" });
+    const response = await mw(ctx, okHandler(ctx));
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:4321");
+  });
 });

@@ -2,6 +2,7 @@
 
 import type { Context } from "../context";
 import type { Middleware } from "../middleware";
+import { getClientIPFromRequest } from "../client-ip";
 
 /** 限流存储接口 */
 export interface RateLimitStore {
@@ -27,6 +28,11 @@ export interface RateLimitOptions {
   max?: number;
   /** 触发限流时的响应消息 */
   message?: string;
+  /**
+   * 是否信任代理头。
+   * 默认 false，避免客户端通过伪造 X-Forwarded-For / X-Real-IP 绕过限流。
+   */
+  trustProxyHeaders?: boolean;
   /** 生成限流键的函数 */
   keyFn?: (ctx: Context) => string;
   /** 自定义存储后端 */
@@ -86,12 +92,8 @@ export function createMemoryRateLimitStore(): RateLimitStore {
  * @param ctx - 请求上下文
  * @returns IP 字符串
  */
-function defaultKeyFn(ctx: Context): string {
-  return (
-    ctx.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    ctx.headers.get("x-real-ip") ??
-    "unknown"
-  );
+function defaultKeyFn(ctx: Context, trustProxyHeaders = false): string {
+  return getClientIPFromRequest(ctx.request, { trustProxyHeaders }) ?? "unknown";
 }
 
 /**
@@ -103,7 +105,7 @@ export function rateLimit(options: RateLimitOptions = {}): Middleware {
   const windowMs = options.windowMs ?? 60_000;
   const max = options.max ?? 100;
   const message = options.message ?? "Too Many Requests";
-  const keyFn = options.keyFn ?? defaultKeyFn;
+  const keyFn = options.keyFn ?? ((ctx: Context) => defaultKeyFn(ctx, options.trustProxyHeaders));
   const store = options.store ?? createMemoryRateLimitStore();
 
   return async (ctx: Context, next) => {

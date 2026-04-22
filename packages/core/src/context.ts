@@ -3,6 +3,23 @@
 /** 带类型的 Response（phantom type，仅用于编译期推导） */
 export type TypedResponse<T = unknown> = Response & { __data?: T };
 
+/**
+ * 请求状态对象，可通过模块扩展声明自定义字段。
+ *
+ * @example
+ * ```typescript
+ * declare module "@aeron/core" {
+ *   interface ContextState {
+ *     user?: { id: string; name: string };
+ *     tenant?: string;
+ *   }
+ * }
+ * ```
+ */
+export interface ContextState {
+  [key: string]: unknown;
+}
+
 /** HTTP 请求上下文接口，包含请求信息、参数及响应辅助方法 */
 export interface Context<
   TParams extends Record<string, unknown> = Record<string, string>,
@@ -29,7 +46,7 @@ export interface Context<
   /** FormData（声明 formData schema 时自动注入） */
   readonly formData: TFormData;
   /** 可在中间件间共享的状态存储 */
-  readonly state: Map<string, unknown>;
+  readonly state: ContextState;
   /** 请求开始时间戳（performance.now()） */
   readonly startTime: number;
 
@@ -46,7 +63,7 @@ export interface Context<
    * @param status - HTTP 状态码，默认 200
    * @returns Response 对象
    */
-  json<T>(data: T, status?: number): TypedResponse<T>;
+  json<T>(data: T, status?: number, headers?: Record<string, string>): TypedResponse<T>;
   /**
    * 返回纯文本响应
    * @param data - 文本内容
@@ -103,15 +120,21 @@ export function createContext<TParams extends Record<string, unknown> = Record<s
     body: {} as Record<string, unknown>,
     headers: request.headers,
     formData: {} as Record<string, unknown>,
-    state: new Map(),
+    state: {} as ContextState,
     startTime: performance.now(),
     user: undefined,
     tenant: undefined,
 
-    json<T>(data: T, status = 200): TypedResponse<T> {
+    json<T>(data: T, status = 200, headers?: Record<string, string>): TypedResponse<T> {
+      const h = new Headers({ "Content-Type": "application/json" });
+      if (headers) {
+        for (const [k, v] of Object.entries(headers)) {
+          h.set(k, v);
+        }
+      }
       return new Response(JSON.stringify(data), {
         status,
-        headers: { "Content-Type": "application/json" },
+        headers: h,
       }) as TypedResponse<T>;
     },
 

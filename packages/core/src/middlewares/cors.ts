@@ -25,15 +25,21 @@ export interface CorsOptions {
  * @param option - CORS 配置中的 origin
  * @returns 是否允许
  */
+function normalizeOrigin(origin: string): string {
+  // 去除尾部斜杠，避免 "http://localhost:4321/" 与 "http://localhost:4321" 不匹配
+  return origin.replace(/\/$/, "");
+}
+
 function isOriginAllowed(requestOrigin: string, option: CorsOptions["origin"]): boolean {
   if (option === undefined) {
     return false; // 默认 deny
   }
+  const normalizedRequestOrigin = normalizeOrigin(requestOrigin);
   if (typeof option === "string") {
-    return option === requestOrigin;
+    return normalizeOrigin(option) === normalizedRequestOrigin;
   }
   if (Array.isArray(option)) {
-    return option.includes(requestOrigin);
+    return option.map(normalizeOrigin).includes(normalizedRequestOrigin);
   }
   return option(requestOrigin);
 }

@@ -7,7 +7,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@aeron/core": "workspace:*"
+    "@aeron/core": "workspace:*",
+    "ajv": "^8.18.0"
   },
   "devDependencies": {
     "@types/bun": "latest"

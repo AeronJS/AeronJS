@@ -126,6 +126,47 @@ describe("createRowFilter", () => {
     expect(clause).toBe("");
   });
 
+  test("buildWhereClause escapes SQL literal payloads", () => {
+    const rf = createRowFilter();
+    rf.addRule({
+      resource: "users",
+      field: "tenant_id",
+      operator: "eq",
+      valueFrom: "tenant",
+      value: "tenant_id",
+    });
+
+    const clause = rf.buildWhereClause("users", { tenantId: "t' OR '1'='1" });
+    expect(clause).toBe("WHERE tenant_id = 't'' OR ''1''=''1'");
+  });
+
+  test("buildWhereClause fails closed when tenant context is missing", () => {
+    const rf = createRowFilter();
+    rf.addRule({
+      resource: "users",
+      field: "tenant_id",
+      operator: "eq",
+      valueFrom: "tenant",
+      value: "tenant_id",
+    });
+
+    const clause = rf.buildWhereClause("users", {});
+    expect(clause).toBe("WHERE 1 = 0");
+  });
+
+  test("addRule rejects unsafe SQL identifiers", () => {
+    const rf = createRowFilter();
+    expect(() =>
+      rf.addRule({
+        resource: "users",
+        field: "tenant_id; DROP TABLE users",
+        operator: "eq",
+        valueFrom: "tenant",
+        value: "tenant_id",
+      }),
+    ).toThrow("Unsafe SQL identifier");
+  });
+
   test("multiple rules join with AND", () => {
     const rf = createRowFilter();
     rf.addRule({ resource: "t", field: "a", operator: "eq", valueFrom: "static", value: "1" });

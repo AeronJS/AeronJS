@@ -39,6 +39,11 @@ describe("Sandbox", () => {
     expect(sandbox.canAccessURL("https://api.example.com/v1")).toBe(false);
   });
 
+  test("canAccessURL 未提供主机白名单时拒绝", () => {
+    const sandbox = createSandbox({ allowNetworkAccess: true });
+    expect(sandbox.canAccessURL("https://api.example.com/v1")).toBe(false);
+  });
+
   test("canAccessPath 读取通过", () => {
     const sandbox = createSandbox({
       allowFileRead: true,
@@ -64,6 +69,13 @@ describe("Sandbox", () => {
     });
     expect(sandbox.canAccessPath("/app/data/../etc/passwd", "read")).toBe(false);
     expect(sandbox.canAccessPath("/etc/passwd", "read")).toBe(false);
+  });
+
+  test("canAccessPath 未提供工作目录时拒绝", () => {
+    const sandbox = createSandbox({
+      allowFileRead: true,
+    });
+    expect(sandbox.canAccessPath("/app/data/file.txt", "read")).toBe(false);
   });
 
   test("wrapExecution 权限拒绝", async () => {

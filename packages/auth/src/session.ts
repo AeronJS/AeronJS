@@ -139,6 +139,10 @@ export function createMemorySessionStore(): SessionStore {
     async touch(id: string, ttl: number): Promise<void> {
       const session = sessions.get(id);
       if (session) {
+        if (session.expiresAt <= Date.now()) {
+          sessions.delete(id);
+          return;
+        }
         session.expiresAt = Date.now() + ttl * 1000;
       }
     },

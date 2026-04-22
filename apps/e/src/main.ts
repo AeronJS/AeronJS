@@ -1,4 +1,4 @@
-import { createApp, createRouter, requestLogger, errorHandler } from "@aeron/core";
+import { createApp, createRouter, requestLogger, errorHandler, type Middleware, cors, requestId } from "@aeron/core";
 import { createDatabase, defineModel, column } from "@aeron/database";
 import { createJWT, createRBAC, createPasswordHasher } from "@aeron/auth";
 import { createCache, createMemoryAdapter } from "@aeron/cache";
@@ -138,9 +138,109 @@ router.resource("/users1", {
   destroy: async (ctx) => ctx.json({}), // DELETE /users/:id
 });
 
+const requireAuth: Middleware = async (ctx, next) => {
+  const token = ctx.query['token']
+  if (!token) return ctx.json({ error: "Unauthorized" }, 401);
+  ctx.state.user = { name: 'test' }
+  return next();
+};
+
+// 基础分组
+router.group("/api/v1", (api) => {
+  api.get("/users", async (ctx) => ctx.json({user: ctx.state.user}));
+  api.post("/users", async (ctx) => ctx.json({a:2}));
+  api.get("/users/:id", async (ctx) => ctx.json({a:3}));
+}, requireAuth);
+
+// 嵌套分组
+router.group("/api", (api) => {
+  api.group("/v2", (v2) => {
+    v2.get("/users", async (ctx) => {
+      return ctx.json({ data: "value" }, 200, {
+        "x-custom-header": "value"
+      });
+    });
+  });
+});
+
+// 读取表单数据
+router.post("/upload", {
+  formData: {
+    file: { type: 'file', required: true },
+    name: { type: 'string', required: true }
+  }
+},async (ctx) => {
+  const formData = await ctx.request.formData();
+  const file = formData.get("file") as File;
+  return new Response(file)
+});
+
+// 读取原始文本
+router.post("/webhook", async (ctx) => {
+  const text = await ctx.request.text();
+  return ctx.text(text)
+});
+
+router.get('/hello1', ctx => {
+  // return ctx.html("<h1>Hello</h1>")
+  return ctx.redirect("/new-path");
+})
+
+router.get("/stream", async (ctx) => {
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue("data: hello\n\n");
+      setTimeout(() => {
+        controller.enqueue("data: world\n\n");
+        controller.close();
+      }, 3000)
+    }
+  });
+  // return ctx.stream(stream, "text/event-stream")
+  return new Response(stream, {
+  headers: {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+  },
+});
+
+});
+
 const app = createApp({ port: 3000 });
 app.use(errorHandler());
 app.use(requestLogger());
+// 自定义中间件示例
+const timingMiddleware: Middleware = async (ctx, next) => {
+  const start = performance.now();
+  const response = await next();
+  const duration = (performance.now() - start).toFixed(2);
+  console.log(`${ctx.method} ${ctx.path} - ${duration}ms`);
+  return response;
+};
+
+app.use(timingMiddleware);
+
+// 执行顺序: A前 -> B前 -> C处理 -> B后 -> A后
+const middlewareA: Middleware = async (ctx, next) => {
+  console.log("A: before");
+  const response = await next();
+  console.log("A: after");
+  return response;
+};
+
+const middlewareB: Middleware = async (ctx, next) => {
+  console.log("B: before");
+  const response = await next();
+  console.log("B: after");
+  return response;
+};
+
+app.use(middlewareA);
+app.use(middlewareB);
+app.use(cors({ origin: "http://localhost:4321/" }));
+app.use(requestId("X-Request-Id"));
+
 app.use(router);
 
 // ── OpenAPI 文档生成 ──────────────────────────────────

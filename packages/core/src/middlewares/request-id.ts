@@ -12,7 +12,7 @@ import type { Middleware } from "../middleware";
 export function requestId(headerName = "X-Request-Id"): Middleware {
   return async (ctx: Context, next) => {
     const id = ctx.headers.get(headerName) ?? crypto.randomUUID();
-    ctx.state.set("requestId", id);
+    ctx.state.requestId = id;
 
     const response = await next();
     const newHeaders = new Headers(response.headers);

@@ -73,9 +73,21 @@ describe("createSSRFGuard", () => {
     expect(result.reason).toContain("Invalid URL");
   });
 
+  test("blocks localhost hostnames", () => {
+    const guard = createSSRFGuard();
+    const result = guard.validateURL("http://localhost/admin");
+    expect(result.safe).toBe(false);
+    expect(result.reason).toContain("Blocked hostname");
+  });
+
   test("safeFetch throws on blocked URL", async () => {
     const guard = createSSRFGuard();
     expect(guard.safeFetch("http://127.0.0.1/admin")).rejects.toThrow("SSRF blocked");
+  });
+
+  test("safeFetch blocks hostnames that resolve to loopback addresses", async () => {
+    const guard = createSSRFGuard();
+    expect(guard.safeFetch("http://localhost/admin")).rejects.toThrow("SSRF blocked");
   });
 
   test("custom blocked CIDRs", () => {

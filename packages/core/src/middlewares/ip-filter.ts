@@ -1,6 +1,7 @@
 // @aeron/core - IP 黑白名单中间件
 
 import type { Middleware } from "../middleware";
+import { getClientIPFromRequest } from "../client-ip";
 
 /** IP 过滤配置选项 */
 export interface IPFilterOptions {
@@ -8,7 +9,12 @@ export interface IPFilterOptions {
   allowlist?: string[];
   /** 黑名单模式 - 禁止这些 IP */
   denylist?: string[];
-  /** 获取客户端 IP 的方式，默认从 X-Forwarded-For */
+  /**
+   * 是否信任代理头。
+   * 默认 false，避免直接信任客户端可伪造的 X-Forwarded-For / X-Real-IP。
+   */
+  trustProxyHeaders?: boolean;
+  /** 获取客户端 IP 的方式，默认仅在 trustProxyHeaders=true 时读取代理头 */
   getIP?: (req: Request) => string | null;
   /** 被拒绝时的响应状态码 */
   statusCode?: number;
@@ -19,14 +25,8 @@ export interface IPFilterOptions {
  * @param req - Request 对象
  * @returns IP 字符串或 null
  */
-function defaultGetIP(req: Request): string | null {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() ?? null;
-  }
-  const realIP = req.headers.get("x-real-ip");
-  if (realIP) return realIP.trim();
-  return null;
+function defaultGetIP(req: Request, trustProxyHeaders = false): string | null {
+  return getClientIPFromRequest(req, { trustProxyHeaders });
 }
 
 /**
@@ -91,10 +91,11 @@ function ipToNumber(ip: string): number | null {
  * @returns Middleware 实例
  */
 export function ipFilter(options: IPFilterOptions = {}): Middleware {
-  const { allowlist, denylist, getIP = defaultGetIP, statusCode = 403 } = options;
+  const { allowlist, denylist, getIP, statusCode = 403, trustProxyHeaders = false } = options;
+  const resolveIP = getIP ?? ((req: Request) => defaultGetIP(req, trustProxyHeaders));
 
   return async (ctx, next) => {
-    const ip = getIP(ctx.request);
+    const ip = resolveIP(ctx.request);
 
     if (!ip) {
       // 无法获取 IP 时，allowlist 模式下拒绝
