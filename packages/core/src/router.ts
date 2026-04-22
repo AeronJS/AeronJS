@@ -4,7 +4,7 @@ import { type Context, createContext, type TypedResponse } from "./context";
 import { type Middleware, compose } from "./middleware";
 import { ValidationError } from "./errors";
 import { type ParamType, type ParamTypeMap, isValidParamType, paramTypes } from "./param-constraint";
-import type { RouteSchemaConfig, InferSchema, SchemaField } from "./schema-types";
+import type { RouteSchemaConfig, InferSchema, InferResponseType, SchemaField } from "./schema-types";
 import {
   coerceAndValidate,
   coerceAndValidateJSONBody,
@@ -21,9 +21,10 @@ export type RouteHandler<
   TQuery extends Record<string, unknown> = Record<string, string>,
   TBody extends Record<string, unknown> = Record<string, unknown>,
   TFormData extends Record<string, unknown> = Record<string, unknown>,
+  TResponse = unknown,
 > = (
   ctx: Context<TParams, TQuery, TBody, TFormData>,
-) => Promise<Response> | Response;
+) => Promise<TypedResponse<TResponse> | Response> | TypedResponse<TResponse> | Response;
 
 type BunRouteHandler = (req: Request) => Response | Promise<Response>;
 
@@ -207,6 +208,10 @@ export function parseRoutePath(path: string): ParsedRoute {
   }
   stripped += path.slice(lastIndex);
 
+  if (stripped.endsWith("/*")) {
+    params.push({ name: "*", type: "string", customRegex: ".*" });
+  }
+
   return {
     originalPath: path,
     strippedPath: stripped,
@@ -249,6 +254,11 @@ function coerceParams(
 type _InferQuery<T> = T extends Record<string, SchemaField> ? InferSchema<T> : Record<string, string>;
 type _InferBody<T> = T extends Record<string, SchemaField> ? InferSchema<T> : Record<string, unknown>;
 type _InferFormData<T> = T extends Record<string, SchemaField> ? InferSchema<T> : Record<string, unknown>;
+type _InferResponse<T> = T extends Record<number | string, infer R>
+  ? R extends Record<string, SchemaField> | SchemaField
+    ? InferResponseType<R>
+    : Record<string, unknown>
+  : Record<string, unknown>;
 
 /** 路由器接口 */
 export interface Router {
@@ -266,14 +276,15 @@ export interface Router {
    * @param handler - 处理器
    * @param middleware - 可选中间件
    */
-  get<Path extends string, TConfig extends RouteConfig>(
+  get<const Path extends string, const TConfig extends RouteConfig>(
     path: Path,
     config: TConfig,
     handler: RouteHandler<
       InferParams<Path>,
       _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
       _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
-            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>,
+      _InferResponse<TConfig["responses"]>
     >,
     ...middleware: Middleware[]
   ): Router;
@@ -291,14 +302,15 @@ export interface Router {
    * @param handler - 处理器
    * @param middleware - 可选中间件
    */
-  post<Path extends string, TConfig extends RouteConfig>(
+  post<const Path extends string, const TConfig extends RouteConfig>(
     path: Path,
     config: TConfig,
     handler: RouteHandler<
       InferParams<Path>,
       _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
       _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
-            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>,
+      _InferResponse<TConfig["responses"]>
     >,
     ...middleware: Middleware[]
   ): Router;
@@ -316,14 +328,15 @@ export interface Router {
    * @param handler - 处理器
    * @param middleware - 可选中间件
    */
-  put<Path extends string, TConfig extends RouteConfig>(
+  put<const Path extends string, const TConfig extends RouteConfig>(
     path: Path,
     config: TConfig,
     handler: RouteHandler<
       InferParams<Path>,
       _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
       _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
-            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>,
+      _InferResponse<TConfig["responses"]>
     >,
     ...middleware: Middleware[]
   ): Router;
@@ -341,14 +354,15 @@ export interface Router {
    * @param handler - 处理器
    * @param middleware - 可选中间件
    */
-  patch<Path extends string, TConfig extends RouteConfig>(
+  patch<const Path extends string, const TConfig extends RouteConfig>(
     path: Path,
     config: TConfig,
     handler: RouteHandler<
       InferParams<Path>,
       _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
       _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
-            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>,
+      _InferResponse<TConfig["responses"]>
     >,
     ...middleware: Middleware[]
   ): Router;
@@ -366,14 +380,15 @@ export interface Router {
    * @param handler - 处理器
    * @param middleware - 可选中间件
    */
-  delete<Path extends string, TConfig extends RouteConfig>(
+  delete<const Path extends string, const TConfig extends RouteConfig>(
     path: Path,
     config: TConfig,
     handler: RouteHandler<
       InferParams<Path>,
       _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
       _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
-            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>,
+      _InferResponse<TConfig["responses"]>
     >,
     ...middleware: Middleware[]
   ): Router;
@@ -464,6 +479,7 @@ export function createRouter(): Router {
       middleware,
       params: parsed.params,
       schemaConfig,
+      ...(schemaConfig?.metadata !== undefined ? { metadata: schemaConfig.metadata } : {}),
     });
     return router;
   }
@@ -603,6 +619,7 @@ export function createRouter(): Router {
           handler: route.handler,
           middleware: route.middleware,
           params: route.params,
+          schemaConfig: route.schemaConfig,
         };
         if (route.metadata !== undefined) {
           entry.metadata = route.metadata;
@@ -648,6 +665,18 @@ export function createRouter(): Router {
               );
             }
             throw err;
+          }
+
+          // Fallback: Bun may not populate wildcard params for "/*" routes
+          for (const param of route.params) {
+            if (param.name === "*" && coercedParams["*"] === undefined) {
+              const url = new URL(req.url);
+              const prefix = route.strippedPath.slice(0, -1); // "/static/*" -> "/static/"
+              if (url.pathname.startsWith(prefix)) {
+                coercedParams["*"] = url.pathname.slice(prefix.length);
+              }
+              break;
+            }
           }
 
           const schema = route.schemaConfig;

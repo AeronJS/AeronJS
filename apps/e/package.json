@@ -13,7 +13,8 @@
     "@aeron/core": "workspace:*",
     "@aeron/database": "workspace:*",
     "@aeron/events": "workspace:*",
-    "@aeron/observability": "workspace:*"
+    "@aeron/observability": "workspace:*",
+    "@aeron/openapi": "workspace:*"
   },
   "devDependencies": {
     "@aeron/testing": "workspace:*",

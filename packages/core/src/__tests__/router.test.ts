@@ -776,3 +776,73 @@ describe("Router - headers schema", () => {
     expect(body.error).toBe("VALIDATION_ERROR");
   });
 });
+
+describe("Router - merge preserves schemaConfig", () => {
+  test("merged router keeps query schema validation", async () => {
+    const sub = createRouter();
+    sub.get("/items", {
+      query: {
+        page: { type: "int", required: true },
+      },
+    }, (ctx) => ctx.json({ page: ctx.query.page }));
+
+    const main = createRouter();
+    main.merge(sub);
+
+    const compiled = main.compile();
+    const handler = (compiled["/items"] as Record<string, RouteHandler>).GET!;
+
+    const reqMissing = new Request("http://localhost:3000/items");
+    const resMissing = await handler(reqMissing);
+    expect(resMissing.status).toBe(400);
+
+    const reqOk = new Request("http://localhost:3000/items?page=3");
+    const resOk = await handler(reqOk);
+    expect(resOk.status).toBe(200);
+    expect(await resOk.json()).toEqual({ page: 3 });
+  });
+});
+
+describe("Router - wildcard params", () => {
+  test("captures wildcard path in ctx.params", async () => {
+    const router = createRouter();
+    router.get("/static/*", (ctx) => ctx.json({ path: ctx.params["*"] }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/static/*"] as Record<string, RouteHandler>).GET!;
+
+    // Simulate Bun not providing req.params for wildcard
+    const req = new Request("http://localhost:3000/static/css/main.css");
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ path: "css/main.css" });
+  });
+
+  test("handles wildcard with empty remainder", async () => {
+    const router = createRouter();
+    router.get("/static/*", (ctx) => ctx.json({ path: ctx.params["*"] }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/static/*"] as Record<string, RouteHandler>).GET!;
+
+    const req = new Request("http://localhost:3000/static/");
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ path: "" });
+  });
+
+  test("uses req.params when Bun provides it", async () => {
+    const router = createRouter();
+    router.get("/files/*", (ctx) => ctx.json({ path: ctx.params["*"] }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/files/*"] as Record<string, RouteHandler>).GET!;
+
+    const req = new Request("http://localhost:3000/files/docs/readme.md");
+    Object.defineProperty(req, "params", { value: { "*": "docs/readme.md" } });
+
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ path: "docs/readme.md" });
+  });
+});

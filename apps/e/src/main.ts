@@ -3,6 +3,7 @@ import { createDatabase, defineModel, column } from "@aeron/database";
 import { createJWT, createRBAC, createPasswordHasher } from "@aeron/auth";
 import { createCache, createMemoryAdapter } from "@aeron/cache";
 import { createLogger } from "@aeron/observability";
+import { createOpenAPIGenerator, syncRouterToOpenAPI, createScalarUIPlugin } from "@aeron/openapi";
 
 // 定义数据模型
 const UserModel = defineModel("users", {
@@ -103,10 +104,75 @@ router.get("/users", async (ctx) => {
   return ctx.json(users);
 });
 
+router.get('/things', {
+  query: {
+    page: { type: 'int', required: true, default: 1 },
+    limit: { type: 'int', default: 10 },
+  },
+  responses: {
+    200: {
+      page: { type: "int" },
+      limit: { type: "string" },
+    },
+  },
+}, (ctx) => {
+  return ctx.json({
+    page: ctx.query.page,
+    limit: ctx.query.limit
+  })
+})
+
+// 匹配 /static/xxx 下的所有路径
+router.get("/static/*", async (ctx) => {
+  console.log(ctx.params)
+  const filePath = ctx.params["*"];
+  const file = Bun.file(`./public/${filePath}`);
+  return new Response(file);
+});
+
+router.resource("/users1", {
+  index: async (ctx) => ctx.json({}),         // GET /users
+  show: async (ctx) => ctx.json({}),  // GET /users/:id
+  create: async (ctx) => ctx.json({}, 201), // POST /users
+  update: async (ctx) => ctx.json({}), // PUT /users/:id
+  destroy: async (ctx) => ctx.json({}), // DELETE /users/:id
+});
+
 const app = createApp({ port: 3000 });
 app.use(errorHandler());
 app.use(requestLogger());
 app.use(router);
+
+// ── OpenAPI 文档生成 ──────────────────────────────────
+
+const openAPIGen = createOpenAPIGenerator();
+
+openAPIGen.setInfo({
+  title: "Aeron E App API",
+  version: "1.0.0",
+  description: "Aeron E 示例应用的 OpenAPI 文档",
+});
+
+openAPIGen.addServer({
+  url: "http://localhost:3000",
+  description: "本地开发服务器",
+});
+
+// 注册 Bearer Token 安全方案
+openAPIGen.addSecurityScheme("bearerAuth", {
+  type: "http",
+  scheme: "bearer",
+  bearerFormat: "JWT",
+});
+
+// 自动同步路由到 OpenAPI
+syncRouterToOpenAPI(router, openAPIGen);
+
+// Scalar UI 文档页面
+app.use(createScalarUIPlugin({ specUrl: "/openapi.json", title: "Aeron E API Docs" }));
+
+// OpenAPI JSON 端点
+app.router.get("/openapi.json", async (ctx) => ctx.json(openAPIGen.generate()));
 
 // 启动前自动建表（示例用；生产环境应使用迁移工具）
 await db.raw(`

@@ -108,6 +108,14 @@ export type InferSchema<T extends Record<string, SchemaField> | undefined> =
     ? { [K in keyof T]: T[K] extends SchemaField ? InferFieldType<T[K]> : unknown }
     : Record<string, unknown>;
 
+/** 从响应 Schema 推导 TypeScript 类型（支持对象或单字段） */
+export type InferResponseType<T> =
+  T extends Record<string, SchemaField>
+    ? InferSchema<T>
+    : T extends SchemaField
+      ? InferFieldType<T>
+      : Record<string, unknown>;
+
 // ---------- 运行时转换 ----------
 
 function coerceValue(value: unknown, field: SchemaField): unknown {
