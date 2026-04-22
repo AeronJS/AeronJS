@@ -1,13 +1,28 @@
 // @aeron/core - 路由系统
 
-import { type Context, createContext } from "./context";
+import { type Context, createContext, type TypedResponse } from "./context";
 import { type Middleware, compose } from "./middleware";
 import { ValidationError } from "./errors";
 import { type ParamType, type ParamTypeMap, isValidParamType, paramTypes } from "./param-constraint";
+import type { RouteSchemaConfig, InferSchema, SchemaField } from "./schema-types";
+import {
+  coerceAndValidate,
+  coerceAndValidateJSONBody,
+  coerceAndValidateFormBody,
+  coerceAndValidateFormDataBody,
+} from "./schema-types";
+
+/** 路由配置（声明式接口契约） */
+export interface RouteConfig extends RouteSchemaConfig {}
 
 /** 路由处理器类型 */
-export type RouteHandler<TParams extends Record<string, unknown> = Record<string, string>> = (
-  ctx: Context<TParams>,
+export type RouteHandler<
+  TParams extends Record<string, unknown> = Record<string, string>,
+  TQuery extends Record<string, unknown> = Record<string, string>,
+  TBody extends Record<string, unknown> = Record<string, unknown>,
+  TFormData extends Record<string, unknown> = Record<string, unknown>,
+> = (
+  ctx: Context<TParams, TQuery, TBody, TFormData>,
 ) => Promise<Response> | Response;
 
 type BunRouteHandler = (req: Request) => Response | Promise<Response>;
@@ -51,6 +66,8 @@ export interface RouteDefinition {
   metadata?: Record<string, unknown>;
   /** 参数定义列表 */
   params: ParsedParam[];
+  /** 路由 schema 配置 */
+  schemaConfig?: RouteConfig | undefined;
 }
 
 /** REST 资源处理器集合 */
@@ -68,14 +85,60 @@ export interface ResourceHandlers {
 }
 
 /** 类型推导工具：从路径字符串字面量提取参数类型 */
-export type InferParams<Path extends string> =
-  Path extends `${infer _Start}:${infer Name}<${infer Type}>${infer Rest}`
-    ? { [K in Name]: ParamTypeMap[Type extends ParamType ? Type : "string"] } & InferParams<Rest>
-    : Path extends `${infer _Start}:${infer Name}${infer Rest}`
-      ? { [K in Name]: string } & InferParams<Rest>
-      : Record<string, never>;
+type InferParamSegment<Segment extends string> = Segment extends `${infer Name}<${infer Type}>${string}`
+  ? { [K in Name]: ParamTypeMap[Type extends ParamType ? Type : "string"] }
+  : Segment extends `${infer Name}(${string}`
+    ? { [K in Name]: string }
+  : { [K in Segment]: string };
 
-const PARAM_REGEX = /:([a-zA-Z_][a-zA-Z0-9_]*)<([^>]+)>(?:\(([^)]+)\))?/g;
+export type InferParams<Path extends string> = Path extends `${infer _Start}:${infer Segment}/${infer Rest}`
+  ? InferParamSegment<Segment> & InferParams<`/${Rest}`>
+  : Path extends `${infer _Start}:${infer Segment}`
+    ? InferParamSegment<Segment>
+    : Record<string, never>;
+
+function isParamNameChar(char: string, isFirst = false): boolean {
+  const code = char.charCodeAt(0);
+  const isLetter = (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+  const isDigit = code >= 48 && code <= 57;
+  return isFirst ? isLetter || char === "_" : isLetter || isDigit || char === "_";
+}
+
+function readBalancedRegex(path: string, startIndex: number): { regex: string; endIndex: number } {
+  let depth = 0;
+  let escaped = false;
+  let value = "";
+
+  for (let i = startIndex; i < path.length; i += 1) {
+    const char = path[i]!;
+    if (escaped) {
+      value += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      value += char;
+      escaped = true;
+      continue;
+    }
+    if (char === "(") {
+      depth += 1;
+      value += char;
+      continue;
+    }
+    if (char === ")") {
+      if (depth === 0) {
+        return { regex: value, endIndex: i + 1 };
+      }
+      depth -= 1;
+      value += char;
+      continue;
+    }
+    value += char;
+  }
+
+  throw new Error(`Unclosed custom regex in route "${path}"`);
+}
 
 /**
  * 解析路由路径，提取参数名、类型及自定义正则
@@ -86,19 +149,54 @@ export function parseRoutePath(path: string): ParsedRoute {
   const params: ParsedParam[] = [];
   const replacements: Array<{ start: number; end: number; name: string }> = [];
 
-  let match: RegExpExecArray | null;
-  // Reset regex state
-  PARAM_REGEX.lastIndex = 0;
+  for (let i = 0; i < path.length; i += 1) {
+    if (path[i] !== ":") continue;
 
-  while ((match = PARAM_REGEX.exec(path)) !== null) {
-    const name = match[1]!;
-    const type = match[2]!;
-    const customRegex = match[3];
-    if (!isValidParamType(type)) {
-      throw new Error(`Unknown param type "${type}" in route "${path}"`);
+    const start = i;
+    let cursor = i + 1;
+    if (cursor >= path.length || !isParamNameChar(path[cursor]!, true)) continue;
+
+    let name = "";
+    while (cursor < path.length && isParamNameChar(path[cursor]!)) {
+      name += path[cursor];
+      cursor += 1;
     }
-    params.push({ name, type: type as ParamType, customRegex });
-    replacements.push({ start: match.index, end: match.index + match[0].length, name });
+
+    let type: ParamType | undefined;
+    let customRegex: string | undefined;
+
+    if (cursor < path.length && path[cursor] === "<") {
+      cursor += 1;
+
+      const typeStart = cursor;
+      while (cursor < path.length && path[cursor] !== ">") {
+        cursor += 1;
+      }
+      if (cursor >= path.length) {
+        throw new Error(`Unclosed param type in route "${path}"`);
+      }
+
+      const parsedType = path.slice(typeStart, cursor);
+      if (!isValidParamType(parsedType)) {
+        throw new Error(`Unknown param type "${parsedType}" in route "${path}"`);
+      }
+      type = parsedType;
+      cursor += 1;
+    } else if (cursor < path.length && path[cursor] === "(") {
+      type = "string";
+    } else {
+      continue;
+    }
+
+    if (cursor < path.length && path[cursor] === "(") {
+      const parsedRegex = readBalancedRegex(path, cursor + 1);
+      customRegex = parsedRegex.regex;
+      cursor = parsedRegex.endIndex;
+    }
+
+    params.push({ name, type, customRegex });
+    replacements.push({ start, end: cursor, name });
+    i = cursor - 1;
   }
 
   let stripped = "";
@@ -147,6 +245,11 @@ function coerceParams(
   return coerced;
 }
 
+// 辅助类型：schema 不存在时返回兼容的默认类型
+type _InferQuery<T> = T extends Record<string, SchemaField> ? InferSchema<T> : Record<string, string>;
+type _InferBody<T> = T extends Record<string, SchemaField> ? InferSchema<T> : Record<string, unknown>;
+type _InferFormData<T> = T extends Record<string, SchemaField> ? InferSchema<T> : Record<string, unknown>;
+
 /** 路由器接口 */
 export interface Router {
   /**
@@ -157,12 +260,48 @@ export interface Router {
    */
   get<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
   /**
+   * 注册 GET 路由（带 schema 配置）
+   * @param path - 路径
+   * @param config - 路由配置
+   * @param handler - 处理器
+   * @param middleware - 可选中间件
+   */
+  get<Path extends string, TConfig extends RouteConfig>(
+    path: Path,
+    config: TConfig,
+    handler: RouteHandler<
+      InferParams<Path>,
+      _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
+      _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+    >,
+    ...middleware: Middleware[]
+  ): Router;
+  /**
    * 注册 POST 路由
    * @param path - 路径
    * @param handler - 处理器
    * @param middleware - 可选中间件
    */
   post<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
+  /**
+   * 注册 POST 路由（带 schema 配置）
+   * @param path - 路径
+   * @param config - 路由配置
+   * @param handler - 处理器
+   * @param middleware - 可选中间件
+   */
+  post<Path extends string, TConfig extends RouteConfig>(
+    path: Path,
+    config: TConfig,
+    handler: RouteHandler<
+      InferParams<Path>,
+      _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
+      _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+    >,
+    ...middleware: Middleware[]
+  ): Router;
   /**
    * 注册 PUT 路由
    * @param path - 路径
@@ -171,6 +310,24 @@ export interface Router {
    */
   put<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
   /**
+   * 注册 PUT 路由（带 schema 配置）
+   * @param path - 路径
+   * @param config - 路由配置
+   * @param handler - 处理器
+   * @param middleware - 可选中间件
+   */
+  put<Path extends string, TConfig extends RouteConfig>(
+    path: Path,
+    config: TConfig,
+    handler: RouteHandler<
+      InferParams<Path>,
+      _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
+      _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+    >,
+    ...middleware: Middleware[]
+  ): Router;
+  /**
    * 注册 PATCH 路由
    * @param path - 路径
    * @param handler - 处理器
@@ -178,12 +335,48 @@ export interface Router {
    */
   patch<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
   /**
+   * 注册 PATCH 路由（带 schema 配置）
+   * @param path - 路径
+   * @param config - 路由配置
+   * @param handler - 处理器
+   * @param middleware - 可选中间件
+   */
+  patch<Path extends string, TConfig extends RouteConfig>(
+    path: Path,
+    config: TConfig,
+    handler: RouteHandler<
+      InferParams<Path>,
+      _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
+      _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+    >,
+    ...middleware: Middleware[]
+  ): Router;
+  /**
    * 注册 DELETE 路由
    * @param path - 路径
    * @param handler - 处理器
    * @param middleware - 可选中间件
    */
   delete<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
+  /**
+   * 注册 DELETE 路由（带 schema 配置）
+   * @param path - 路径
+   * @param config - 路由配置
+   * @param handler - 处理器
+   * @param middleware - 可选中间件
+   */
+  delete<Path extends string, TConfig extends RouteConfig>(
+    path: Path,
+    config: TConfig,
+    handler: RouteHandler<
+      InferParams<Path>,
+      _InferQuery<TConfig["query"]> extends Record<string, unknown> ? _InferQuery<TConfig["query"]> : Record<string, string>,
+      _InferBody<TConfig["body"]> extends Record<string, unknown> ? _InferBody<TConfig["body"]> : Record<string, unknown>,
+            _InferFormData<TConfig["formData"]> extends Record<string, unknown> ? _InferFormData<TConfig["formData"]> : Record<string, unknown>
+    >,
+    ...middleware: Middleware[]
+  ): Router;
   /**
    * 创建路由分组
    * @param prefix - 分组前缀
@@ -260,6 +453,7 @@ export function createRouter(): Router {
     path: string,
     handler: RouteHandler,
     middleware: Middleware[],
+    schemaConfig?: RouteConfig,
   ): Router {
     const parsed = parseRoutePath(path);
     routeDefs.push({
@@ -269,16 +463,57 @@ export function createRouter(): Router {
       handler,
       middleware,
       params: parsed.params,
+      schemaConfig,
     });
     return router;
   }
 
   const router: Router = {
-    get: (path, handler, ...mw) => addRoute("GET", path, handler as RouteHandler, mw),
-    post: (path, handler, ...mw) => addRoute("POST", path, handler as RouteHandler, mw),
-    put: (path, handler, ...mw) => addRoute("PUT", path, handler as RouteHandler, mw),
-    patch: (path, handler, ...mw) => addRoute("PATCH", path, handler as RouteHandler, mw),
-    delete: (path, handler, ...mw) => addRoute("DELETE", path, handler as RouteHandler, mw),
+    get: ((path: string, arg2: RouteHandler | RouteConfig, ...rest: Middleware[]) => {
+      if (typeof arg2 === "function") {
+        return addRoute("GET", path, arg2, rest);
+      }
+      const config = arg2;
+      const handler = rest[0] as RouteHandler;
+      const mw = rest.slice(1);
+      return addRoute("GET", path, handler, mw, config);
+    }) as Router["get"],
+    post: ((path: string, arg2: RouteHandler | RouteConfig, ...rest: Middleware[]) => {
+      if (typeof arg2 === "function") {
+        return addRoute("POST", path, arg2, rest);
+      }
+      const config = arg2;
+      const handler = rest[0] as RouteHandler;
+      const mw = rest.slice(1);
+      return addRoute("POST", path, handler, mw, config);
+    }) as Router["post"],
+    put: ((path: string, arg2: RouteHandler | RouteConfig, ...rest: Middleware[]) => {
+      if (typeof arg2 === "function") {
+        return addRoute("PUT", path, arg2, rest);
+      }
+      const config = arg2;
+      const handler = rest[0] as RouteHandler;
+      const mw = rest.slice(1);
+      return addRoute("PUT", path, handler, mw, config);
+    }) as Router["put"],
+    patch: ((path: string, arg2: RouteHandler | RouteConfig, ...rest: Middleware[]) => {
+      if (typeof arg2 === "function") {
+        return addRoute("PATCH", path, arg2, rest);
+      }
+      const config = arg2;
+      const handler = rest[0] as RouteHandler;
+      const mw = rest.slice(1);
+      return addRoute("PATCH", path, handler, mw, config);
+    }) as Router["patch"],
+    delete: ((path: string, arg2: RouteHandler | RouteConfig, ...rest: Middleware[]) => {
+      if (typeof arg2 === "function") {
+        return addRoute("DELETE", path, arg2, rest);
+      }
+      const config = arg2;
+      const handler = rest[0] as RouteHandler;
+      const mw = rest.slice(1);
+      return addRoute("DELETE", path, handler, mw, config);
+    }) as Router["delete"],
 
     group(prefix, callback, ...groupMiddleware) {
       const subRouter = createRouter();
@@ -400,29 +635,100 @@ export function createRouter(): Router {
 
         const allMiddleware = [...globalMiddleware, ...route.middleware];
 
-        compiled[path]![route.method] = (req: Request): Promise<Response> => {
+        compiled[path]![route.method] = async (req: Request): Promise<Response> => {
           const rawParams = (req as Request & { params?: Record<string, string> }).params ?? {};
-          let coerced: Record<string, unknown>;
+          let coercedParams: Record<string, unknown>;
           try {
-            coerced = coerceParams(rawParams, route.params);
+            coercedParams = coerceParams(rawParams, route.params);
           } catch (err) {
             if (err instanceof ValidationError) {
-              return Promise.resolve(
-                new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: err.message }), {
-                  status: 400,
-                  headers: { "Content-Type": "application/json" },
-                }),
+              return new Response(
+                JSON.stringify({ error: "VALIDATION_ERROR", errors: [err.message] }),
+                { status: 400, headers: { "Content-Type": "application/json" } },
               );
             }
             throw err;
           }
-          const ctx = createContext(req, coerced) as Context<Record<string, string>>;
 
-          if (allMiddleware.length === 0) {
-            return Promise.resolve(route.handler(ctx));
+          const schema = route.schemaConfig;
+          let coercedQuery: Record<string, unknown> = {};
+          let coercedBody: Record<string, unknown> = {};
+          let coercedFormData: Record<string, unknown> = {};
+
+          if (schema) {
+            if (schema.query) {
+              const url = new URL(req.url);
+              const rawQuery: Record<string, unknown> = {};
+              url.searchParams.forEach((v, k) => {
+                rawQuery[k] = v;
+              });
+              const result = coerceAndValidate(rawQuery, schema.query);
+              if (result.errors.length > 0) {
+                return new Response(
+                  JSON.stringify({ error: "VALIDATION_ERROR", errors: result.errors }),
+                  { status: 400, headers: { "Content-Type": "application/json" } },
+                );
+              }
+              coercedQuery = result.data;
+            }
+
+            if (schema.headers) {
+              const result = coerceAndValidate(req.headers, schema.headers);
+              if (result.errors.length > 0) {
+                return new Response(
+                  JSON.stringify({ error: "VALIDATION_ERROR", errors: result.errors }),
+                  { status: 400, headers: { "Content-Type": "application/json" } },
+                );
+              }
+            }
+
+            if (schema.body) {
+              const contentType = req.headers.get("content-type") ?? "";
+              let result: { data: Record<string, unknown>; errors: string[] };
+              if (contentType.includes("application/json")) {
+                result = await coerceAndValidateJSONBody(req, schema.body);
+              } else if (contentType.includes("application/x-www-form-urlencoded")) {
+                result = await coerceAndValidateFormBody(req, schema.body);
+              } else {
+                return new Response(
+                  JSON.stringify({ error: "VALIDATION_ERROR", errors: ["Unsupported Content-Type for body validation"] }),
+                  { status: 400, headers: { "Content-Type": "application/json" } },
+                );
+              }
+              if (result.errors.length > 0) {
+                return new Response(
+                  JSON.stringify({ error: "VALIDATION_ERROR", errors: result.errors }),
+                  { status: 400, headers: { "Content-Type": "application/json" } },
+                );
+              }
+              coercedBody = result.data;
+            }
+
+            if (schema.formData) {
+              const result = await coerceAndValidateFormDataBody(req, schema.formData);
+              if (result.errors.length > 0) {
+                return new Response(
+                  JSON.stringify({ error: "VALIDATION_ERROR", errors: result.errors }),
+                  { status: 400, headers: { "Content-Type": "application/json" } },
+                );
+              }
+              coercedFormData = result.data;
+            }
           }
 
-          return compose(allMiddleware)(ctx, () => Promise.resolve(route.handler(ctx)));
+          const baseCtx = createContext(req, coercedParams);
+          const ctx = {
+            ...baseCtx,
+            query: schema?.query ? coercedQuery : baseCtx.query,
+            body: coercedBody,
+            formData: coercedFormData,
+          };
+
+          if (allMiddleware.length === 0) {
+            return route.handler(ctx as Context);
+          }
+
+          return compose(allMiddleware)(ctx as Context, () => Promise.resolve(route.handler(ctx as Context)));
         };
       }
 

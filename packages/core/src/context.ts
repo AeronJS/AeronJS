@@ -1,7 +1,15 @@
 // @aeron/core - 请求上下文
 
+/** 带类型的 Response（phantom type，仅用于编译期推导） */
+export type TypedResponse<T = unknown> = Response & { __data?: T };
+
 /** HTTP 请求上下文接口，包含请求信息、参数及响应辅助方法 */
-export interface Context<TParams extends Record<string, unknown> = Record<string, string>> {
+export interface Context<
+  TParams extends Record<string, unknown> = Record<string, string>,
+  TQuery extends Record<string, unknown> = Record<string, string>,
+  TBody extends Record<string, unknown> = Record<string, unknown>,
+  TFormData extends Record<string, unknown> = Record<string, unknown>,
+> {
   /** 原始 Request 对象 */
   readonly request: Request;
   /** 解析后的 URL 对象 */
@@ -13,9 +21,13 @@ export interface Context<TParams extends Record<string, unknown> = Record<string
   /** 路由参数 */
   readonly params: TParams;
   /** URL 查询参数对象 */
-  readonly query: Record<string, string>;
-  /** 请求头 */
+  readonly query: TQuery;
+  /** 请求体（声明 body schema 时自动注入） */
+  readonly body: TBody;
+  /** 请求头（原生 Headers） */
   readonly headers: Headers;
+  /** FormData（声明 formData schema 时自动注入） */
+  readonly formData: TFormData;
   /** 可在中间件间共享的状态存储 */
   readonly state: Map<string, unknown>;
   /** 请求开始时间戳（performance.now()） */
@@ -34,7 +46,7 @@ export interface Context<TParams extends Record<string, unknown> = Record<string
    * @param status - HTTP 状态码，默认 200
    * @returns Response 对象
    */
-  json(data: unknown, status?: number): Response;
+  json<T>(data: T, status?: number): TypedResponse<T>;
   /**
    * 返回纯文本响应
    * @param data - 文本内容
@@ -88,17 +100,19 @@ export function createContext<TParams extends Record<string, unknown> = Record<s
     path: url.pathname,
     params: params ?? ({} as TParams),
     query,
+    body: {} as Record<string, unknown>,
     headers: request.headers,
+    formData: {} as Record<string, unknown>,
     state: new Map(),
     startTime: performance.now(),
     user: undefined,
     tenant: undefined,
 
-    json(data: unknown, status = 200): Response {
+    json<T>(data: T, status = 200): TypedResponse<T> {
       return new Response(JSON.stringify(data), {
         status,
         headers: { "Content-Type": "application/json" },
-      });
+      }) as TypedResponse<T>;
     },
 
     text(data: string, status = 200): Response {

@@ -286,6 +286,72 @@ describe("parseRoutePath", () => {
     expect(parsed.params[1]).toEqual({ name: "slug", type: "string" });
   });
 
+  test("parses multiple untyped params", () => {
+    const parsed = parseRoutePath("/orgs/:orgId/repos/:repoId");
+    expect(parsed.strippedPath).toBe("/orgs/:orgId/repos/:repoId");
+    expect(parsed.params).toHaveLength(0);
+  });
+
+  test("parses mixed typed and untyped params", () => {
+    const parsed = parseRoutePath("/users/:userId<int>/posts/:postId");
+    expect(parsed.strippedPath).toBe("/users/:userId/posts/:postId");
+    expect(parsed.params).toHaveLength(1);
+    expect(parsed.params[0]).toEqual({ name: "userId", type: "int" });
+  });
+
+  test("parses untyped params with custom regex", () => {
+    const parsed = parseRoutePath("/users/:userId(\\d{2,4})/posts/:postId(^ey[a-zA-Z0-9]{8}==$)");
+    expect(parsed.strippedPath).toBe("/users/:userId/posts/:postId");
+    expect(parsed.params).toHaveLength(2);
+    expect(parsed.params[0]).toEqual({ name: "userId", type: "string", customRegex: "\\d{2,4}" });
+    expect(parsed.params[1]).toEqual({
+      name: "postId",
+      type: "string",
+      customRegex: "^ey[a-zA-Z0-9]{8}==$",
+    });
+  });
+
+  test("parses multiple typed params with custom regex", () => {
+    const parsed = parseRoutePath("/users/:year<int>(\\d{4})/posts/:slug<string>(^[a-z]{3}$)");
+    expect(parsed.strippedPath).toBe("/users/:year/posts/:slug");
+    expect(parsed.params).toHaveLength(2);
+    expect(parsed.params[0]).toEqual({ name: "year", type: "int", customRegex: "\\d{4}" });
+    expect(parsed.params[1]).toEqual({ name: "slug", type: "string", customRegex: "^[a-z]{3}$" });
+  });
+
+  test("parses custom regex with escaped parentheses", () => {
+    const parsed = parseRoutePath("/files/:name<string>(^[a-z]+\\([0-9]+\\)$)");
+    expect(parsed.strippedPath).toBe("/files/:name");
+    expect(parsed.params).toHaveLength(1);
+    expect(parsed.params[0]).toEqual({
+      name: "name",
+      type: "string",
+      customRegex: "^[a-z]+\\([0-9]+\\)$",
+    });
+  });
+
+  test("parses custom regex with non-capturing groups", () => {
+    const parsed = parseRoutePath("/items/:code<string>(^(?:ab|cd)[0-9]{2}$)");
+    expect(parsed.strippedPath).toBe("/items/:code");
+    expect(parsed.params).toHaveLength(1);
+    expect(parsed.params[0]).toEqual({
+      name: "code",
+      type: "string",
+      customRegex: "^(?:ab|cd)[0-9]{2}$",
+    });
+  });
+
+  test("parses custom regex with nested non-capturing groups", () => {
+    const parsed = parseRoutePath("/items/:code<string>(^(?:foo(?:bar)?|baz)$)");
+    expect(parsed.strippedPath).toBe("/items/:code");
+    expect(parsed.params).toHaveLength(1);
+    expect(parsed.params[0]).toEqual({
+      name: "code",
+      type: "string",
+      customRegex: "^(?:foo(?:bar)?|baz)$",
+    });
+  });
+
   test("leaves untyped params unchanged", () => {
     const parsed = parseRoutePath("/users/:id");
     expect(parsed.strippedPath).toBe("/users/:id");
@@ -298,6 +364,27 @@ describe("parseRoutePath", () => {
 });
 
 describe("Router - typed params runtime coercion", () => {
+  test("keeps untyped params as strings", async () => {
+    const router = createRouter();
+    router.get("/users/:userId/posts/:postId", (ctx) =>
+      ctx.json({
+        userId: ctx.params.userId,
+        postId: ctx.params.postId,
+        types: [typeof ctx.params.userId, typeof ctx.params.postId],
+      }),
+    );
+
+    const compiled = router.compile();
+    const handler = (compiled["/users/:userId/posts/:postId"] as Record<string, RouteHandler>).GET!;
+
+    const req = new Request("http://localhost:3000/users/113/posts/aa");
+    Object.defineProperty(req, "params", { value: { userId: "113", postId: "aa" } });
+
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ userId: "113", postId: "aa", types: ["string", "string"] });
+  });
+
   test("coerces int param to number", async () => {
     const router = createRouter();
     router.get("/users/:id<int>", (ctx) => ctx.json({ id: ctx.params.id, type: typeof ctx.params.id }));
@@ -373,6 +460,128 @@ describe("Router - typed params runtime coercion", () => {
     const resBad = await handler(reqBad);
     expect(resBad.status).toBe(400);
   });
+
+  test("uses custom regex for multiple typed params", async () => {
+    const router = createRouter();
+    router.get("/users/:year<int>(\\d{4})/posts/:slug<string>(^[a-z]{3}$)", (ctx) =>
+      ctx.json({
+        year: ctx.params.year,
+        slug: ctx.params.slug,
+        types: [typeof ctx.params.year, typeof ctx.params.slug],
+      }),
+    );
+
+    const compiled = router.compile();
+    const handler = (compiled["/users/:year/posts/:slug"] as Record<string, RouteHandler>).GET!;
+
+    const reqOk = new Request("http://localhost:3000/users/2024/posts/abc");
+    Object.defineProperty(reqOk, "params", { value: { year: "2024", slug: "abc" } });
+    const resOk = await handler(reqOk);
+    expect(resOk.status).toBe(200);
+    expect(await resOk.json()).toEqual({ year: 2024, slug: "abc", types: ["number", "string"] });
+
+    const reqBad = new Request("http://localhost:3000/users/2024/posts/ab");
+    Object.defineProperty(reqBad, "params", { value: { year: "2024", slug: "ab" } });
+    const resBad = await handler(reqBad);
+    expect(resBad.status).toBe(400);
+  });
+
+  test("uses custom regex with escaped parentheses", async () => {
+    const router = createRouter();
+    router.get("/files/:name<string>(^[a-z]+\\([0-9]+\\)$)", (ctx) =>
+      ctx.json({
+        name: ctx.params.name,
+        type: typeof ctx.params.name,
+      }),
+    );
+
+    const compiled = router.compile();
+    const handler = (compiled["/files/:name"] as Record<string, RouteHandler>).GET!;
+
+    const reqOk = new Request("http://localhost:3000/files/abc(123)");
+    Object.defineProperty(reqOk, "params", { value: { name: "abc(123)" } });
+    const resOk = await handler(reqOk);
+    expect(resOk.status).toBe(200);
+    expect(await resOk.json()).toEqual({ name: "abc(123)", type: "string" });
+
+    const reqBad = new Request("http://localhost:3000/files/abc123");
+    Object.defineProperty(reqBad, "params", { value: { name: "abc123" } });
+    const resBad = await handler(reqBad);
+    expect(resBad.status).toBe(400);
+  });
+
+  test("uses custom regex with non-capturing groups", async () => {
+    const router = createRouter();
+    router.get("/items/:code<string>(^(?:ab|cd)[0-9]{2}$)", (ctx) =>
+      ctx.json({
+        code: ctx.params.code,
+        type: typeof ctx.params.code,
+      }),
+    );
+
+    const compiled = router.compile();
+    const handler = (compiled["/items/:code"] as Record<string, RouteHandler>).GET!;
+
+    const reqOk = new Request("http://localhost:3000/items/ab12");
+    Object.defineProperty(reqOk, "params", { value: { code: "ab12" } });
+    const resOk = await handler(reqOk);
+    expect(resOk.status).toBe(200);
+    expect(await resOk.json()).toEqual({ code: "ab12", type: "string" });
+
+    const reqBad = new Request("http://localhost:3000/items/zz12");
+    Object.defineProperty(reqBad, "params", { value: { code: "zz12" } });
+    const resBad = await handler(reqBad);
+    expect(resBad.status).toBe(400);
+  });
+
+  test("uses custom regex with nested non-capturing groups", async () => {
+    const router = createRouter();
+    router.get("/items/:code<string>(^(?:foo(?:bar)?|baz)$)", (ctx) =>
+      ctx.json({
+        code: ctx.params.code,
+        type: typeof ctx.params.code,
+      }),
+    );
+
+    const compiled = router.compile();
+    const handler = (compiled["/items/:code"] as Record<string, RouteHandler>).GET!;
+
+    const reqOk = new Request("http://localhost:3000/items/foobar");
+    Object.defineProperty(reqOk, "params", { value: { code: "foobar" } });
+    const resOk = await handler(reqOk);
+    expect(resOk.status).toBe(200);
+    expect(await resOk.json()).toEqual({ code: "foobar", type: "string" });
+
+    const reqBad = new Request("http://localhost:3000/items/qux");
+    Object.defineProperty(reqBad, "params", { value: { code: "qux" } });
+    const resBad = await handler(reqBad);
+    expect(resBad.status).toBe(400);
+  });
+
+  test("uses untyped params with custom regex", async () => {
+    const router = createRouter();
+    router.get("/users/:userId(\\d{2,4})/posts/:postId(^ey[a-zA-Z0-9]{8}==$)", (ctx) =>
+      ctx.json({
+        userId: ctx.params.userId,
+        postId: ctx.params.postId,
+        types: [typeof ctx.params.userId, typeof ctx.params.postId],
+      }),
+    );
+
+    const compiled = router.compile();
+    const handler = (compiled["/users/:userId/posts/:postId"] as Record<string, RouteHandler>).GET!;
+
+    const reqOk = new Request("http://localhost:3000/users/11/posts/eyaaaaaaaa==");
+    Object.defineProperty(reqOk, "params", { value: { userId: "11", postId: "eyaaaaaaaa==" } });
+    const resOk = await handler(reqOk);
+    expect(resOk.status).toBe(200);
+    expect(await resOk.json()).toEqual({ userId: "11", postId: "eyaaaaaaaa==", types: ["string", "string"] });
+
+    const reqBad = new Request("http://localhost:3000/users/abc/posts/eyaaaaaaaa==");
+    Object.defineProperty(reqBad, "params", { value: { userId: "abc", postId: "eyaaaaaaaa==" } });
+    const resBad = await handler(reqBad);
+    expect(resBad.status).toBe(400);
+  });
 });
 
 describe("Router - duplicate detection with stripped paths", () => {
@@ -390,5 +599,180 @@ describe("Router - duplicate detection with stripped paths", () => {
     router.post("/users/:id<int>", (ctx) => ctx.json({ id: ctx.params.id }));
 
     expect(() => router.compile()).not.toThrow();
+  });
+});
+
+describe("Router - query schema", () => {
+  test("coerces query params by schema", async () => {
+    const router = createRouter();
+    router.get("/users", {
+      query: {
+        page: { type: "int", default: 1 },
+        limit: { type: "int", default: 20 },
+      },
+    }, (ctx) => ctx.json({
+      page: ctx.query.page,
+      limit: ctx.query.limit,
+      types: [typeof ctx.query.page, typeof ctx.query.limit],
+    }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/users"] as Record<string, RouteHandler>).GET!;
+    const req = new Request("http://localhost:3000/users?page=3&limit=10");
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ page: 3, limit: 10, types: ["number", "number"] });
+  });
+
+  test("applies default values for missing query params", async () => {
+    const router = createRouter();
+    router.get("/users", {
+      query: {
+        page: { type: "int", default: 1 },
+        limit: { type: "int", default: 20 },
+      },
+    }, (ctx) => ctx.json({
+      page: ctx.query.page,
+      limit: ctx.query.limit,
+    }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/users"] as Record<string, RouteHandler>).GET!;
+    const req = new Request("http://localhost:3000/users");
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ page: 1, limit: 20 });
+  });
+
+  test("returns 400 for invalid query params", async () => {
+    const router = createRouter();
+    router.get("/users", {
+      query: {
+        page: { type: "int", required: true },
+      },
+    }, (ctx) => ctx.json({ page: ctx.query.page }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/users"] as Record<string, RouteHandler>).GET!;
+    const req = new Request("http://localhost:3000/users?page=abc");
+    const res = await handler(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("VALIDATION_ERROR");
+    expect(body.errors).toBeDefined();
+  });
+});
+
+describe("Router - body schema", () => {
+  test("parses and validates JSON body", async () => {
+    const router = createRouter();
+    router.post("/users", {
+      body: {
+        name: { type: "string", required: true },
+        age: { type: "int" },
+      },
+    }, (ctx) => ctx.json({
+      name: ctx.body.name,
+      age: ctx.body.age,
+      types: [typeof ctx.body.name, typeof ctx.body.age],
+    }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/users"] as Record<string, RouteHandler>).POST!;
+    const req = new Request("http://localhost:3000/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Alice", age: "30" }),
+    });
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ name: "Alice", age: 30, types: ["string", "number"] });
+  });
+
+  test("returns 400 for invalid JSON body", async () => {
+    const router = createRouter();
+    router.post("/users", {
+      body: {
+        name: { type: "string", required: true },
+      },
+    }, (ctx) => ctx.json({ name: ctx.body.name }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/users"] as Record<string, RouteHandler>).POST!;
+    const req = new Request("http://localhost:3000/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const res = await handler(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("VALIDATION_ERROR");
+  });
+});
+
+describe("Router - formData schema", () => {
+  test("parses and validates formData text fields", async () => {
+    const router = createRouter();
+    router.post("/upload", {
+      formData: {
+        title: { type: "string", required: true },
+        count: { type: "int" },
+      },
+    }, (ctx) => ctx.json({
+      title: ctx.formData.title,
+      count: ctx.formData.count,
+      types: [typeof ctx.formData.title, typeof ctx.formData.count],
+    }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/upload"] as Record<string, RouteHandler>).POST!;
+    const formData = new FormData();
+    formData.append("title", "hello");
+    formData.append("count", "42");
+    const req = new Request("http://localhost:3000/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ title: "hello", count: 42, types: ["string", "number"] });
+  });
+});
+
+describe("Router - headers schema", () => {
+  test("validates headers by schema", async () => {
+    const router = createRouter();
+    router.get("/protected", {
+      headers: {
+        authorization: { type: "string", required: true },
+      },
+    }, (ctx) => ctx.json({ ok: true }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/protected"] as Record<string, RouteHandler>).GET!;
+    const req = new Request("http://localhost:3000/protected", {
+      headers: { Authorization: "Bearer token123" },
+    });
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+
+  test("returns 400 for missing required headers", async () => {
+    const router = createRouter();
+    router.get("/protected", {
+      headers: {
+        authorization: { type: "string", required: true },
+      },
+    }, (ctx) => ctx.json({ ok: true }));
+
+    const compiled = router.compile();
+    const handler = (compiled["/protected"] as Record<string, RouteHandler>).GET!;
+    const req = new Request("http://localhost:3000/protected");
+    const res = await handler(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("VALIDATION_ERROR");
   });
 });

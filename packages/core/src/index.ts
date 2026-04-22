@@ -137,6 +137,21 @@ export type { ModuleDefinition, ModuleRegistry } from "./module";
 export { createWebSocketRouter } from "./websocket";
 export type { WSRoute, WSConnection, WebSocketRouter } from "./websocket";
 
+// ========== Schema 类型与推导 ==========
+export {
+  coerceAndValidate,
+  coerceAndValidateJSONBody,
+  coerceAndValidateFormBody,
+  coerceAndValidateFormDataBody,
+} from "./schema-types";
+export type {
+  SchemaFieldType,
+  SchemaField,
+  RouteSchemaConfig,
+  InferFieldType,
+  InferSchema,
+} from "./schema-types";
+
 // ========== 参数类型约束 ==========
 export { paramTypes, isValidParamType } from "./param-constraint";
 export type {
