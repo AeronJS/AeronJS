@@ -1,0 +1,6 @@
+name = "vento-stack-docs"
+
+[assets]
+directory = "./apps/docs/dist"
+not_found_handling = "404-page"
+html_handling = "auto-trailing-slash"
