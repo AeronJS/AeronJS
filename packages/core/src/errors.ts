@@ -1,29 +1,29 @@
-// @aeron/core - 错误体系
+// @ventostack/core - 错误体系
 // Error 是唯一允许使用 class 的场景
 
-/** Aeron 框架基础错误类 */
-export class AeronError extends Error {
+/** VentoStack 框架基础错误类 */
+export class VentoStackError extends Error {
   /** HTTP 状态码 */
   readonly code: number;
   /** 业务错误码 */
   readonly errorCode: string;
 
   /**
-   * 构造 AeronError
+   * 构造 VentoStackError
    * @param message - 错误描述
    * @param code - HTTP 状态码
    * @param errorCode - 业务错误码
    */
   constructor(message: string, code: number, errorCode: string) {
     super(message);
-    this.name = "AeronError";
+    this.name = "VentoStackError";
     this.code = code;
     this.errorCode = errorCode;
   }
 }
 
 /** 客户端错误（4xx） */
-export class ClientError extends AeronError {
+export class ClientError extends VentoStackError {
   /**
    * 构造 ClientError
    * @param message - 错误描述，默认 "Client Error"
@@ -37,7 +37,7 @@ export class ClientError extends AeronError {
 }
 
 /** 服务端错误（5xx） */
-export class ServerError extends AeronError {
+export class ServerError extends VentoStackError {
   /**
    * 构造 ServerError
    * @param message - 错误描述，默认 "Internal Server Error"

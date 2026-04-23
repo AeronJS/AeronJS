@@ -1,5 +1,5 @@
 /**
- * @aeron/events - 消息队列适配器接口
+ * @ventostack/events - 消息队列适配器接口
  * 定义统一 MQ 抽象，支持内存适配器及外部 MQ（Kafka/RabbitMQ/NATS 等）扩展注册
  * 内存适配器基于 Set 存储订阅者，publish 时同步调用所有处理器
  */

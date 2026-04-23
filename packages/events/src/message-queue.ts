@@ -1,5 +1,5 @@
 /**
- * @aeron/events - 内存消息队列
+ * @ventostack/events - 内存消息队列
  * 支持重试、并发控制与多消费者订阅
  */
 

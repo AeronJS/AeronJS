@@ -1,5 +1,5 @@
 // ============================================================
-// @aeron/openapi — Schema Builder
+// @ventostack/openapi — Schema Builder
 // OpenAPI 3.0 Schema 构建函数
 // ============================================================
 

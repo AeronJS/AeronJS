@@ -1,6 +1,6 @@
 ---
 title: 快速开始
-description: 5 分钟内创建并运行你的第一个 Aeron 应用
+description: 5 分钟内创建并运行你的第一个 VentoStack 应用
 ---
 
 ## 前置条件
@@ -14,15 +14,15 @@ curl -fsSL https://bun.sh/install | bash
 ## 创建项目
 
 ```bash
-mkdir my-aeron-app
-cd my-aeron-app
+mkdir my-ventostack-app
+cd my-ventostack-app
 bun init -y
 ```
 
 ## 安装依赖
 
 ```bash
-bun add @aeron/core
+bun add @ventostack/core
 ```
 
 ## 创建应用
@@ -30,12 +30,12 @@ bun add @aeron/core
 创建 `src/main.ts`：
 
 ```typescript
-import { createApp, createRouter } from "@aeron/core";
+import { createApp, createRouter } from "@ventostack/core";
 
 const router = createRouter();
 
 router.get("/", async (ctx) => {
-  return ctx.json({ message: "Hello, Aeron!" });
+  return ctx.json({ message: "Hello, VentoStack!" });
 });
 
 router.get("/users/:id", async (ctx) => {
@@ -64,14 +64,14 @@ bun --hot src/main.ts
 访问 `http://localhost:3000`，你会看到：
 
 ```json
-{ "message": "Hello, Aeron!" }
+{ "message": "Hello, VentoStack!" }
 ```
 
 ## 添加中间件
 
 ```typescript
-import { createApp, createRouter } from "@aeron/core";
-import type { Middleware } from "@aeron/core";
+import { createApp, createRouter } from "@ventostack/core";
+import type { Middleware } from "@ventostack/core";
 
 // 日志中间件
 const logger: Middleware = async (ctx, next) => {
@@ -106,15 +106,15 @@ await app.listen();
 首先安装额外依赖：
 
 ```bash
-bun add @aeron/database @aeron/auth @aeron/cache @aeron/observability
+bun add @ventostack/database @ventostack/auth @ventostack/cache @ventostack/observability
 ```
 
 ```typescript
-import { createApp, createRouter, requestLogger, errorHandler } from "@aeron/core";
-import { createDatabase, defineModel, column } from "@aeron/database";
-import { createJWT, createRBAC, createPasswordHasher } from "@aeron/auth";
-import { createCache, createMemoryAdapter } from "@aeron/cache";
-import { createLogger } from "@aeron/observability";
+import { createApp, createRouter, requestLogger, errorHandler } from "@ventostack/core";
+import { createDatabase, defineModel, column } from "@ventostack/database";
+import { createJWT, createRBAC, createPasswordHasher } from "@ventostack/auth";
+import { createCache, createMemoryAdapter } from "@ventostack/cache";
+import { createLogger } from "@ventostack/observability";
 
 // 定义数据模型
 const UserModel = defineModel("users", {

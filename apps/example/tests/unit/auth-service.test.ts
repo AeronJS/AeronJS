@@ -4,7 +4,7 @@ import {
   createTestUserService,
   createTestAuthService,
 } from "../setup";
-import type { Database } from "@aeron/database";
+import type { Database } from "@ventostack/database";
 
 describe("auth-service", () => {
   let db: Database;

@@ -8,7 +8,7 @@ description: 使用 createMetricsCollector 收集应用性能指标
 ## 基本用法
 
 ```typescript
-import { createMetricsCollector } from "@aeron/observability";
+import { createMetricsCollector } from "@ventostack/observability";
 
 const metrics = createMetricsCollector();
 

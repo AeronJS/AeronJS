@@ -92,11 +92,11 @@ describe("createTestClient", () => {
 
   describe("POST", () => {
     test("sends JSON body", async () => {
-      const res = await client.post("/echo-body", { name: "aeron" });
+      const res = await client.post("/echo-body", { name: "ventostack" });
       const data = res.json<{ body: string; contentType: string; method: string }>();
       expect(data.method).toBe("POST");
       expect(data.contentType).toContain("application/json");
-      expect(JSON.parse(data.body)).toEqual({ name: "aeron" });
+      expect(JSON.parse(data.body)).toEqual({ name: "ventostack" });
     });
 
     test("sends string body", async () => {

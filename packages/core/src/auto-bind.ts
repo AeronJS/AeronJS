@@ -1,4 +1,4 @@
-// @aeron/core - 自动绑定（JSON / Form → Struct）
+// @ventostack/core - 自动绑定（JSON / Form → Struct）
 
 import type { Context } from "./context";
 import type { Schema } from "./validator";

@@ -1,5 +1,5 @@
 /**
- * @aeron/testing - Test Container 数据库隔离
+ * @ventostack/testing - Test Container 数据库隔离
  * 提供内存测试数据库与测试生命周期 Fixture，支持 SQL 执行、保存点、回滚与自动清理
  */
 

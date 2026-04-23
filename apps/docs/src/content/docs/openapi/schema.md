@@ -3,12 +3,12 @@ title: Schema 定义
 description: 使用 defineSchema 和 generateOpenAPISpec 生成 OpenAPI 3.1 文档
 ---
 
-`@aeron/openapi` 提供了从代码自动生成 OpenAPI 3.1 规范的能力，保持文档与代码同步。
+`@ventostack/openapi` 提供了从代码自动生成 OpenAPI 3.1 规范的能力，保持文档与代码同步。
 
 ## 定义 Schema
 
 ```typescript
-import { defineSchema, generateOpenAPISpec } from "@aeron/openapi";
+import { defineSchema, generateOpenAPISpec } from "@ventostack/openapi";
 
 const UserSchema = defineSchema({
   type: "object",
@@ -36,7 +36,7 @@ const CreateUserSchema = defineSchema({
 ## 定义 API 端点
 
 ```typescript
-import { defineOperation } from "@aeron/openapi";
+import { defineOperation } from "@ventostack/openapi";
 
 const listUsers = defineOperation({
   summary: "获取用户列表",

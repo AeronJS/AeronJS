@@ -1,4 +1,4 @@
-// @aeron/core - 生命周期管理
+// @ventostack/core - 生命周期管理
 
 /** 生命周期钩子函数 */
 export type LifecycleHook = () => Promise<void> | void;

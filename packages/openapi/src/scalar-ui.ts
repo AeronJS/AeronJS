@@ -1,11 +1,11 @@
 /**
- * @aeron/openapi — Scalar 内嵌页面
+ * @ventostack/openapi — Scalar 内嵌页面
  *
  * 提供基于 CDN 的 Scalar API 参考文档 UI 生成、路由处理器和插件。
  * 无需本地依赖，直接通过 CDN 加载 Scalar。
  */
 
-import type { AeronApp, Plugin } from "@aeron/core";
+import type { VentoStackApp, Plugin } from "@ventostack/core";
 
 /** Scalar UI 配置选项 */
 export interface ScalarUIOptions {
@@ -75,7 +75,7 @@ export function createScalarUIHandler(options: ScalarUIOptions = {}): () => Resp
 /**
  * 创建 Scalar UI 插件
  * @param options - Scalar UI 配置选项
- * @returns Aeron 插件实例
+ * @returns VentoStack 插件实例
  *
  * 自动注册 /docs 路由并在启动时打印访问地址。
  */
@@ -83,7 +83,7 @@ export function createScalarUIPlugin(options: ScalarUIOptions = {}): Plugin {
   const path = options.path ?? "/docs";
   return {
     name: "scalar-ui",
-    install(app: AeronApp) {
+    install(app: VentoStackApp) {
       app.router.get(path, createScalarUIHandler(options));
       app.addUrl("Scalar UI", path);
     },

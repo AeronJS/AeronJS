@@ -1,4 +1,4 @@
-// @aeron/core - gRPC 抽象层（基于 HTTP/2 的类型安全 RPC）
+// @ventostack/core - gRPC 抽象层（基于 HTTP/2 的类型安全 RPC）
 
 /** gRPC 服务定义 */
 export interface ServiceDefinition {

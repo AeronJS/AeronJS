@@ -1,5 +1,5 @@
 /**
- * @aeron/cli — Password Command
+ * @ventostack/cli — Password Command
  *
  * 提供基于 Bun.password 的密码哈希命令，用于生成安全的密码哈希字符串。
  */
@@ -19,7 +19,7 @@ export function createPasswordCommand(): Command {
       const plaintext = positional[0];
 
       if (!plaintext) {
-        console.error("Usage: aeron password <plaintext>");
+        console.error("Usage: ventostack password <plaintext>");
         return;
       }
 

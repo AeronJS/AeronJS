@@ -1,5 +1,5 @@
 /**
- * @aeron/events - 可靠投递（持久化 + ACK 确认）
+ * @ventostack/events - 可靠投递（持久化 + ACK 确认）
  * 追踪消息全生命周期状态（pending/sent/acked/failed/dead），支持 ACK/NACK 与失败重试
  * 适用于对消息送达有严格要求的业务场景
  */

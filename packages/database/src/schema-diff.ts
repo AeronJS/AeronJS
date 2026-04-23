@@ -1,5 +1,5 @@
 /**
- * @aeron/database — 自动检测 Schema 差异
+ * @ventostack/database — 自动检测 Schema 差异
  * 提供表/列的增删改检测与迁移 SQL 生成能力
  * 支持对比当前数据库 Schema 与目标 Schema，生成 up / down 双向迁移 SQL
  */

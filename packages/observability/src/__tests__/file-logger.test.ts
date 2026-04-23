@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFileLogger } from "../file-logger";
 
-const tmpDir = mkdtempSync(join(tmpdir(), "aeron-test-"));
+const tmpDir = mkdtempSync(join(tmpdir(), "ventostack-test-"));
 afterAll(() => rmSync(tmpDir, { recursive: true }));
 
 describe("createFileLogger", () => {

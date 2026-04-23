@@ -1,5 +1,5 @@
 /**
- * @aeron/auth - 认证授权模块统一导出
+ * @ventostack/auth - 认证授权模块统一导出
  *
  * 提供完整的认证与授权能力，包括：
  * - JWT 签发与验证（createJWT）

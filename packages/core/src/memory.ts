@@ -1,4 +1,4 @@
-// @aeron/core - 内存控制与资源监控
+// @ventostack/core - 内存控制与资源监控
 
 /** 内存信息 */
 export interface MemoryInfo {

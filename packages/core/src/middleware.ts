@@ -1,4 +1,4 @@
-// @aeron/core - 中间件系统（洋葱模型）
+// @ventostack/core - 中间件系统（洋葱模型）
 
 import type { Context } from "./context";
 

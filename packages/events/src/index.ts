@@ -1,7 +1,7 @@
 /**
- * @aeron/events - 事件与任务模块统一导出
+ * @ventostack/events - 事件与任务模块统一导出
  *
- * 提供 Aeron 框架的异步事件与任务调度基础设施，包括：
+ * 提供 VentoStack 框架的异步事件与任务调度基础设施，包括：
  * - 类型安全的事件总线（createEventBus / defineEvent）
  * - 任务调度器与 Cron 解析（createScheduler / parseCronToInterval）
  * - 内存消息队列（createMemoryQueue）

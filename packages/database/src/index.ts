@@ -1,7 +1,7 @@
 /**
- * @aeron/database — 数据库包统一入口
+ * @ventostack/database — 数据库包统一入口
  *
- * 提供 Aeron 框架的数据层基础设施，包括：
+ * 提供 VentoStack 框架的数据层基础设施，包括：
  * - 数据库核心：配置、创建、执行器与查询入口（createDatabase）
  * - 模型定义：列类型、模型工厂与类型推导（defineModel / column）
  * - 查询构建器：链式条件、排序、分组、聚合、批量插入等（createQueryBuilder）

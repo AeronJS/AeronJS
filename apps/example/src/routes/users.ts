@@ -1,4 +1,4 @@
-import type { Router } from "@aeron/core";
+import type { Router } from "@ventostack/core";
 import type { createUserService } from "../services/user-service";
 import {
   validateCreateUser,

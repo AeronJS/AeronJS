@@ -1,4 +1,4 @@
-# Aeron — Bun 全栈框架
+# VentoStack — Bun 全栈框架
 
 > 成为 Bun 生态中最完整、最工程化、默认安全的全栈框架。
 >
@@ -8,7 +8,7 @@
 
 ## 1. Project Positioning
 
-Aeron 是基于 Bun 运行时构建的全栈框架，但当前研发重心明确放在后端基础设施。
+VentoStack 是基于 Bun 运行时构建的全栈框架，但当前研发重心明确放在后端基础设施。
 
 当前阶段目标：
 - 极致利用 Bun 原生能力：HTTP、SQL、Redis、Worker、构建、测试

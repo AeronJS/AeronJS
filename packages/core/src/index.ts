@@ -1,9 +1,9 @@
-// @aeron/core - 核心框架层
+// @ventostack/core - 核心框架层
 // 提供 Router、Context、Middleware、Lifecycle、Config、Error handling 等核心能力
 
 // ========== 应用入口 ==========
 export { createApp } from "./app";
-export type { AeronApp, AppConfig, AppUrl } from "./app";
+export type { VentoStackApp, AppConfig, AppUrl } from "./app";
 
 // ========== 路由系统 ==========
 export { createRouter, parseRoutePath } from "./router";
@@ -38,7 +38,7 @@ export type {
 
 // ========== 错误体系 ==========
 export {
-  AeronError,
+  VentoStackError,
   ClientError,
   ServerError,
   NotFoundError,

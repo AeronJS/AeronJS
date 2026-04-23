@@ -1,4 +1,4 @@
-// @aeron/core - SSRF 防护
+// @ventostack/core - SSRF 防护
 
 import { lookup } from "node:dns/promises";
 

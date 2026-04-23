@@ -1,4 +1,4 @@
-// @aeron/core - 内容协商（Content Negotiation）
+// @ventostack/core - 内容协商（Content Negotiation）
 
 /** 协商结果 */
 export interface NegotiationResult {

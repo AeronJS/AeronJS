@@ -1,6 +1,6 @@
 ---
 name: bun-runtime
-description: Bun Runtime & Toolkit 完整参考。涵盖 HTTP、SQL、Redis、S3、文件 I/O、密码、Shell、测试、构建、压缩、Socket 等全部内置 API，以及常用反模式替代方案速查。当涉及 Aeron 框架代码中的 Bun API 使用、性能优化或依赖选择时调用。
+description: Bun Runtime & Toolkit 完整参考。涵盖 HTTP、SQL、Redis、S3、文件 I/O、密码、Shell、测试、构建、压缩、Socket 等全部内置 API，以及常用反模式替代方案速查。当涉及 VentoStack 框架代码中的 Bun API 使用、性能优化或依赖选择时调用。
 ---
 
 # Bun Runtime & Toolkit — Complete Skill Reference
@@ -1053,7 +1053,7 @@ Bun.serve({
   },
 
   // Unix Domain Socket（替代端口）
-  unix: "/tmp/aeron.sock",
+  unix: "/tmp/ventostack.sock",
 
   // WebSocket
   websocket: { /* open / message / close / drain */ },

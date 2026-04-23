@@ -8,7 +8,7 @@ description: 使用 createTracer 实现 OpenTelemetry 兼容的分布式追踪
 ## 基本用法
 
 ```typescript
-import { createTracer } from "@aeron/observability";
+import { createTracer } from "@ventostack/observability";
 
 const tracer = createTracer({
   serviceName: "my-api",

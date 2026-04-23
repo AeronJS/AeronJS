@@ -1,4 +1,4 @@
-// @aeron/cli - Generate Command Tests
+// @ventostack/cli - Generate Command Tests
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,7 +11,7 @@ describe("createGenerateCommand", () => {
   let errorSpy: ReturnType<typeof spyOn>;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "aeron-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "ventostack-test-"));
     logSpy = spyOn(console, "log").mockImplementation(() => {});
     errorSpy = spyOn(console, "error").mockImplementation(() => {});
   });
@@ -26,14 +26,14 @@ describe("createGenerateCommand", () => {
     const cmd = createGenerateCommand({ outputDir: tempDir });
     await cmd.action({});
 
-    expect(errorSpy).toHaveBeenCalledWith("Usage: aeron generate <type> <name>");
+    expect(errorSpy).toHaveBeenCalledWith("Usage: ventostack generate <type> <name>");
   });
 
   test("shows usage when no name provided", async () => {
     const cmd = createGenerateCommand({ outputDir: tempDir });
     await cmd.action({ _: ["controller"] });
 
-    expect(errorSpy).toHaveBeenCalledWith("Usage: aeron generate <type> <name>");
+    expect(errorSpy).toHaveBeenCalledWith("Usage: ventostack generate <type> <name>");
   });
 
   test("shows error for unknown type", async () => {

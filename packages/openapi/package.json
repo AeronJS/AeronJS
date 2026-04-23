@@ -1,5 +1,5 @@
 {
-  "name": "@aeron/openapi",
+  "name": "@ventostack/openapi",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@aeron/core": "workspace:*"
+    "@ventostack/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

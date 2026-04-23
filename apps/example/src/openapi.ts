@@ -1,13 +1,13 @@
-import { createOpenAPIGenerator, syncRouterToOpenAPI } from "@aeron/openapi";
-import type { Router } from "@aeron/core";
+import { createOpenAPIGenerator, syncRouterToOpenAPI } from "@ventostack/openapi";
+import type { Router } from "@ventostack/core";
 
 export function setupOpenAPI(router: Router) {
   const generator = createOpenAPIGenerator();
 
   generator.setInfo({
-    title: "Aeron Example API",
+    title: "VentoStack Example API",
     version: "1.0.0",
-    description: "Production-grade example API for Aeron framework",
+    description: "Production-grade example API for VentoStack framework",
   });
 
   generator.addServer({

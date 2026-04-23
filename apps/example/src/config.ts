@@ -3,7 +3,7 @@ import {
   securityPrecheck,
   type ConfigSchema,
   type ConfigValue,
-} from "@aeron/core";
+} from "@ventostack/core";
 
 const schema = {
   port: {
@@ -13,7 +13,7 @@ const schema = {
   },
   jwtSecret: {
     type: "string",
-    default: "aeron-example-secret-key-at-least-32-bytes!",
+    default: "ventostack-example-secret-key-at-least-32-bytes!",
     env: "JWT_SECRET",
     secret: true,
   },

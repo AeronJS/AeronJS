@@ -1,7 +1,7 @@
 /**
- * @aeron/observability - 可观测性模块统一导出
+ * @ventostack/observability - 可观测性模块统一导出
  *
- * 提供 Aeron 框架的完整可观测性基础设施，包括：
+ * 提供 VentoStack 框架的完整可观测性基础设施，包括：
  * - 结构化日志记录器（createLogger）
  * - Prometheus 兼容指标收集器（createMetrics）
  * - 健康检查服务（createHealthCheck）

@@ -1,4 +1,4 @@
-// @aeron/core - IP 黑白名单中间件
+// @ventostack/core - IP 黑白名单中间件
 
 import type { Middleware } from "../middleware";
 import { getClientIPFromRequest } from "../client-ip";

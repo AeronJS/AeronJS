@@ -1,4 +1,4 @@
-// @aeron/core - 多实例协调（k8s readiness / liveness）
+// @ventostack/core - 多实例协调（k8s readiness / liveness）
 
 /** 实例状态 */
 export type InstanceState = "starting" | "ready" | "draining" | "stopped";

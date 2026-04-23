@@ -16,7 +16,7 @@ description: 使用 createEventStore 实现 CQRS 和事件溯源架构
 ## 基本用法
 
 ```typescript
-import { createEventStore } from "@aeron/events";
+import { createEventStore } from "@ventostack/events";
 
 const store = createEventStore({
   adapter: db,  // 使用数据库存储事件

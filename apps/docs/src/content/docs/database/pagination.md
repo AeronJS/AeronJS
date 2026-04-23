@@ -8,7 +8,7 @@ description: 使用 createPaginator 实现高效的数据分页
 ## 基于页码的分页
 
 ```typescript
-import { createPaginator } from "@aeron/database";
+import { createPaginator } from "@ventostack/database";
 
 const paginator = createPaginator(db);
 

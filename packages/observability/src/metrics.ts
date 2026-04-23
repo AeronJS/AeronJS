@@ -1,5 +1,5 @@
 /**
- * @aeron/observability — Metrics (Prometheus-compatible)
+ * @ventostack/observability — Metrics (Prometheus-compatible)
  * 提供 Counter、Histogram、Gauge 三种指标类型，支持标签维度与 Prometheus 文本格式渲染
  * 支持通过 enabled 开关完全禁用（返回 no-op 指标），禁用时不产生任何副作用
  */

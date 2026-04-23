@@ -1,5 +1,5 @@
 {
-  "name": "aeron-e",
+  "name": "ventostack-e",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -7,17 +7,17 @@
     "dev": "bun --hot src/main.ts"
   },
   "dependencies": {
-    "@aeron/ai": "workspace:*",
-    "@aeron/auth": "workspace:*",
-    "@aeron/cache": "workspace:*",
-    "@aeron/core": "workspace:*",
-    "@aeron/database": "workspace:*",
-    "@aeron/events": "workspace:*",
-    "@aeron/observability": "workspace:*",
-    "@aeron/openapi": "workspace:*"
+    "@ventostack/ai": "workspace:*",
+    "@ventostack/auth": "workspace:*",
+    "@ventostack/cache": "workspace:*",
+    "@ventostack/core": "workspace:*",
+    "@ventostack/database": "workspace:*",
+    "@ventostack/events": "workspace:*",
+    "@ventostack/observability": "workspace:*",
+    "@ventostack/openapi": "workspace:*"
   },
   "devDependencies": {
-    "@aeron/testing": "workspace:*",
+    "@ventostack/testing": "workspace:*",
     "bun-types": "latest"
   }
 }

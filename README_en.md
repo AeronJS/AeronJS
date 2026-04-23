@@ -1,23 +1,23 @@
-# Aeron Framework
+# VentoStack Framework
 
-Aeron is a Bun-native fullstack backend framework built for performance and developer experience. It follows functional-first design principles with no classes, no decorators, and explicit dependencies.
+VentoStack is a Bun-native fullstack backend framework built for performance and developer experience. It follows functional-first design principles with no classes, no decorators, and explicit dependencies.
 
 ## Overview
 
-Aeron provides a complete suite of backend capabilities as composable packages:
+VentoStack provides a complete suite of backend capabilities as composable packages:
 
 | Package | Description |
 |---|---|
-| `@aeron/core` | HTTP server, routing, middleware, config, lifecycle, error handling |
-| `@aeron/database` | Query builder, migrations, connection pooling, transactions |
-| `@aeron/cache` | Cache layer with memory and Redis adapters |
-| `@aeron/auth` | JWT, RBAC, OAuth, session management, MFA |
-| `@aeron/events` | Event bus, pub/sub, event sourcing, CQRS |
-| `@aeron/observability` | Metrics, tracing, structured logging, health checks |
-| `@aeron/openapi` | OpenAPI 3.1 schema generation and validation |
-| `@aeron/testing` | Test utilities, mocks, and test application helpers |
-| `@aeron/ai` | AI integration with LLM adapters, RAG, and streaming |
-| `@aeron/cli` | CLI tooling for scaffolding and code generation |
+| `@ventostack/core` | HTTP server, routing, middleware, config, lifecycle, error handling |
+| `@ventostack/database` | Query builder, migrations, connection pooling, transactions |
+| `@ventostack/cache` | Cache layer with memory and Redis adapters |
+| `@ventostack/auth` | JWT, RBAC, OAuth, session management, MFA |
+| `@ventostack/events` | Event bus, pub/sub, event sourcing, CQRS |
+| `@ventostack/observability` | Metrics, tracing, structured logging, health checks |
+| `@ventostack/openapi` | OpenAPI 3.1 schema generation and validation |
+| `@ventostack/testing` | Test utilities, mocks, and test application helpers |
+| `@ventostack/ai` | AI integration with LLM adapters, RAG, and streaming |
+| `@ventostack/cli` | CLI tooling for scaffolding and code generation |
 
 ## Design Principles
 
@@ -35,18 +35,18 @@ Aeron provides a complete suite of backend capabilities as composable packages:
 ### Installation
 
 ```bash
-bun add @aeron/core
+bun add @ventostack/core
 ```
 
 ### Basic Application
 
 ```typescript
-import { createApp, createRouter } from "@aeron/core";
+import { createApp, createRouter } from "@ventostack/core";
 
 const router = createRouter();
 
 router.get("/", async (ctx) => {
-  return ctx.json({ message: "Hello, Aeron!" });
+  return ctx.json({ message: "Hello, VentoStack!" });
 });
 
 const app = createApp({ port: 3000 });
@@ -57,8 +57,8 @@ await app.listen();
 ### With Authentication
 
 ```typescript
-import { createApp, createRouter } from "@aeron/core";
-import { createJWT, createRBAC } from "@aeron/auth";
+import { createApp, createRouter } from "@ventostack/core";
+import { createJWT, createRBAC } from "@ventostack/auth";
 
 const jwt = createJWT({ secret: process.env.JWT_SECRET! });
 const rbac = createRBAC();
@@ -88,7 +88,7 @@ router.get("/protected", async (ctx) => {
 ### With Database
 
 ```typescript
-import { createDatabase, defineModel, column } from "@aeron/database";
+import { createDatabase, defineModel, column } from "@ventostack/database";
 
 const UserModel = defineModel("users", {
   id: column.bigint({ primary: true, autoIncrement: true }),
@@ -112,7 +112,7 @@ const users = await db
 ### With Cache
 
 ```typescript
-import { createCache, createMemoryAdapter } from "@aeron/cache";
+import { createCache, createMemoryAdapter } from "@ventostack/cache";
 
 const cache = createCache(createMemoryAdapter());
 
@@ -180,7 +180,7 @@ bun test packages/core/src/__tests__/router.test.ts
 
 ## Configuration
 
-Aeron uses environment variables following the 12-Factor App methodology. See each package's documentation for available configuration options.
+VentoStack uses environment variables following the 12-Factor App methodology. See each package's documentation for available configuration options.
 
 ```bash
 PORT=3000

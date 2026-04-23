@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-  AeronError,
+  VentoStackError,
   ClientError,
   ForbiddenError,
   NotFoundError,
@@ -9,23 +9,23 @@ import {
   ValidationError,
 } from "../errors";
 
-describe("AeronError", () => {
+describe("VentoStackError", () => {
   test("creates error with code, errorCode, message", () => {
-    const err = new AeronError("something broke", 500, "BROKEN");
+    const err = new VentoStackError("something broke", 500, "BROKEN");
     expect(err.message).toBe("something broke");
     expect(err.code).toBe(500);
     expect(err.errorCode).toBe("BROKEN");
-    expect(err.name).toBe("AeronError");
+    expect(err.name).toBe("VentoStackError");
   });
 
   test("is instanceof Error", () => {
-    const err = new AeronError("test", 500, "TEST");
+    const err = new VentoStackError("test", 500, "TEST");
     expect(err).toBeInstanceOf(Error);
-    expect(err).toBeInstanceOf(AeronError);
+    expect(err).toBeInstanceOf(VentoStackError);
   });
 
   test("has stack trace", () => {
-    const err = new AeronError("test", 500, "TEST");
+    const err = new VentoStackError("test", 500, "TEST");
     expect(err.stack).toBeDefined();
   });
 });
@@ -46,9 +46,9 @@ describe("ClientError", () => {
     expect(err.errorCode).toBe("UNPROCESSABLE");
   });
 
-  test("is instanceof AeronError", () => {
+  test("is instanceof VentoStackError", () => {
     const err = new ClientError();
-    expect(err).toBeInstanceOf(AeronError);
+    expect(err).toBeInstanceOf(VentoStackError);
     expect(err).toBeInstanceOf(ClientError);
     expect(err).toBeInstanceOf(Error);
   });
@@ -70,9 +70,9 @@ describe("ServerError", () => {
     expect(err.errorCode).toBe("SERVICE_UNAVAILABLE");
   });
 
-  test("is instanceof AeronError", () => {
+  test("is instanceof VentoStackError", () => {
     const err = new ServerError();
-    expect(err).toBeInstanceOf(AeronError);
+    expect(err).toBeInstanceOf(VentoStackError);
     expect(err).toBeInstanceOf(ServerError);
     expect(err).toBeInstanceOf(Error);
   });
@@ -96,7 +96,7 @@ describe("NotFoundError", () => {
   test("is instanceof ClientError", () => {
     const err = new NotFoundError();
     expect(err).toBeInstanceOf(ClientError);
-    expect(err).toBeInstanceOf(AeronError);
+    expect(err).toBeInstanceOf(VentoStackError);
   });
 });
 

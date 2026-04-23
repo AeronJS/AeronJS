@@ -1,9 +1,9 @@
-// @aeron/cli - Migrate Command Tests
+// @ventostack/cli - Migrate Command Tests
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { MigrationRunner, MigrationStatus } from "@aeron/database";
+import type { MigrationRunner, MigrationStatus } from "@ventostack/database";
 import { createMigrateCommand } from "../commands/migrate";
 
 function createMockRunner(overrides?: Partial<MigrationRunner>): MigrationRunner {
@@ -35,7 +35,7 @@ describe("createMigrateCommand", () => {
     await cmd.action({});
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "Usage: aeron migrate <up|down|status|generate> [options]",
+      "Usage: ventostack migrate <up|down|status|generate> [options]",
     );
   });
 
@@ -176,7 +176,7 @@ describe("createMigrateCommand", () => {
     let tempDir: string;
 
     beforeEach(async () => {
-      tempDir = await mkdtemp(join(tmpdir(), "aeron-migrate-test-"));
+      tempDir = await mkdtemp(join(tmpdir(), "ventostack-migrate-test-"));
     });
 
     afterEach(async () => {
@@ -187,7 +187,7 @@ describe("createMigrateCommand", () => {
       const cmd = createMigrateCommand({ outputDir: tempDir });
       await cmd.action({ _: ["generate"] });
 
-      expect(errorSpy).toHaveBeenCalledWith("Usage: aeron migrate generate <name>");
+      expect(errorSpy).toHaveBeenCalledWith("Usage: ventostack migrate generate <name>");
     });
 
     test("generates migration file", async () => {

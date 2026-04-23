@@ -1,6 +1,6 @@
-// @aeron/core - 内置错误处理中间件
+// @ventostack/core - 内置错误处理中间件
 
-import { AeronError } from "../errors";
+import { VentoStackError } from "../errors";
 import type { Context } from "../context";
 import type { Middleware } from "../middleware";
 import type { LoggerLike } from "./logger";
@@ -33,7 +33,7 @@ export interface ErrorHandlerOptions {
 
 /**
  * 全局错误处理中间件：捕获未处理异常，返回统一错误格式。
- * AeronError 返回结构化响应（包含 errorCode 和 message）。
+ * VentoStackError 返回结构化响应（包含 errorCode 和 message）。
  * 其他错误返回 500，且不暴露内部错误细节。
  * @param options - 配置选项
  * @returns Middleware 实例
@@ -50,7 +50,7 @@ export function errorHandler(options?: ErrorHandlerOptions): Middleware {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
 
-      if (error instanceof AeronError) {
+      if (error instanceof VentoStackError) {
         logger.error("handled error", {
           method: ctx.method,
           path: ctx.path,

@@ -8,7 +8,7 @@ description: 使用 createAPIKeyManager 为应用添加 API 密钥认证
 ## 基本用法
 
 ```typescript
-import { createAPIKeyManager } from "@aeron/auth";
+import { createAPIKeyManager } from "@ventostack/auth";
 
 const apiKeys = createAPIKeyManager({
   prefix: "ak",              // 密钥前缀：ak_xxxx

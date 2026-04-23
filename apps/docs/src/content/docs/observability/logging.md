@@ -8,7 +8,7 @@ description: 使用 createLogger 实现结构化日志记录
 ## 基本用法
 
 ```typescript
-import { createLogger } from "@aeron/observability";
+import { createLogger } from "@ventostack/observability";
 
 const logger = createLogger({
   level: "info",        // 最低日志级别
@@ -45,11 +45,11 @@ logger.error("数据库查询失败", { error: err.message, query: "SELECT..." }
 
 ## 请求日志中间件
 
-`@aeron/core` 已内置开箱即用的 `requestLogger`，默认输出结构化 JSON 日志，也支持传入 `@aeron/observability` 的 Logger：
+`@ventostack/core` 已内置开箱即用的 `requestLogger`，默认输出结构化 JSON 日志，也支持传入 `@ventostack/observability` 的 Logger：
 
 ```typescript
-import { requestLogger, errorHandler } from "@aeron/core";
-import { createLogger } from "@aeron/observability";
+import { requestLogger, errorHandler } from "@ventostack/core";
+import { createLogger } from "@ventostack/observability";
 
 const logger = createLogger({ level: "info" });
 

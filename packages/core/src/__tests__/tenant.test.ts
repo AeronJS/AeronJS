@@ -1,4 +1,4 @@
-// @aeron/core - 多租户中间件测试
+// @ventostack/core - 多租户中间件测试
 
 import { describe, expect, it } from "bun:test";
 import { createContext } from "../context";

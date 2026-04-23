@@ -1,5 +1,5 @@
 /**
- * @aeron/testing - 安全回归测试工具
+ * @ventostack/testing - 安全回归测试工具
  * 提供 XSS、SQL 注入、路径遍历、CSRF 等常见攻击面的载荷生成与端点安全测试能力
  */
 

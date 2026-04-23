@@ -1,5 +1,5 @@
 /**
- * @aeron/database — 数据库管理器
+ * @ventostack/database — 数据库管理器
  * 提供基于 Model 的链式查询、原始 SQL 执行、事务与连接生命周期管理
  * 支持 Bun.sql（PostgreSQL）与 bun:sqlite（SQLite）两种原生驱动
  */

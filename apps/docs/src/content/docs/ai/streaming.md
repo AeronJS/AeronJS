@@ -8,8 +8,8 @@ description: 使用 createStreamingHandler 处理 AI 流式输出
 ## 基本用法
 
 ```typescript
-import { createStreamingHandler } from "@aeron/ai";
-import { createLLMAdapter } from "@aeron/ai";
+import { createStreamingHandler } from "@ventostack/ai";
+import { createLLMAdapter } from "@ventostack/ai";
 
 const llm = createLLMAdapter({ provider: "openai", model: "gpt-4o" });
 const streaming = createStreamingHandler();

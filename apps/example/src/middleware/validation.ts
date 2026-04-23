@@ -1,4 +1,4 @@
-import { validateBody, type Schema } from "@aeron/core";
+import { validateBody, type Schema } from "@ventostack/core";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

@@ -123,7 +123,7 @@ describe("App HTTP integration", () => {
         status: res.status,
         headers: {
           ...Object.fromEntries(res.headers.entries()),
-          "X-Framework": "Aeron",
+          "X-Framework": "VentoStack",
         },
       });
     };
@@ -135,10 +135,10 @@ describe("App HTTP integration", () => {
     appToClose = app;
 
     const res = await fetch(`http://localhost:${port}/test`);
-    expect(res.headers.get("X-Framework")).toBe("Aeron");
+    expect(res.headers.get("X-Framework")).toBe("VentoStack");
   });
 
-  test("handles AeronError in handler", async () => {
+  test("handles VentoStackError in handler", async () => {
     const app = createApp();
     app.router.get("/fail", () => {
       throw new NotFoundError("resource missing");

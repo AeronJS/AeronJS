@@ -1,5 +1,5 @@
 {
-  "name": "@aeron/auth",
+  "name": "@ventostack/auth",
   "version": "0.1.0",
   "type": "module",
   "main": "src/index.ts",
@@ -9,9 +9,9 @@
     "./*": "./src/*"
   },
   "dependencies": {
-    "@aeron/core": "workspace:*",
-    "@aeron/database": "workspace:*",
-    "@aeron/cache": "workspace:*"
+    "@ventostack/core": "workspace:*",
+    "@ventostack/database": "workspace:*",
+    "@ventostack/cache": "workspace:*"
   },
   "devDependencies": {
     "bun-types": "latest"

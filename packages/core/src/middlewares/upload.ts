@@ -1,4 +1,4 @@
-// @aeron/core - 上传安全检查
+// @ventostack/core - 上传安全检查
 
 /** 上传校验配置选项 */
 export interface UploadOptions {

@@ -1,11 +1,11 @@
 /**
- * @aeron/openapi — Swagger UI 内嵌页面
+ * @ventostack/openapi — Swagger UI 内嵌页面
  *
  * 提供基于 CDN 的 Swagger UI 生成、路由处理器和插件。
  * 无需本地依赖，直接通过 CDN 加载 Swagger UI。
  */
 
-import type { AeronApp, Plugin } from "@aeron/core";
+import type { VentoStackApp, Plugin } from "@ventostack/core";
 
 /** Swagger UI 配置选项 */
 export interface SwaggerUIOptions {
@@ -78,7 +78,7 @@ export function createSwaggerUIHandler(options: SwaggerUIOptions = {}): () => Re
 /**
  * 创建 Swagger UI 插件
  * @param options - Swagger UI 配置选项
- * @returns Aeron 插件实例
+ * @returns VentoStack 插件实例
  *
  * 自动注册 /docs 路由并在启动时打印访问地址。
  */
@@ -86,7 +86,7 @@ export function createSwaggerUIPlugin(options: SwaggerUIOptions = {}): Plugin {
   const path = options.path ?? "/docs";
   return {
     name: "swagger-ui",
-    install(app: AeronApp) {
+    install(app: VentoStackApp) {
       app.router.get(path, createSwaggerUIHandler(options));
       app.addUrl("Swagger UI", path);
     },

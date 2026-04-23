@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { setupIntegrationTest, teardownIntegrationTest } from "./setup";
-import type { TestAppInstance, TestClient } from "@aeron/testing";
+import type { TestAppInstance, TestClient } from "@ventostack/testing";
 
 describe("openapi endpoints", () => {
   let testApp: TestAppInstance;
@@ -21,7 +21,7 @@ describe("openapi endpoints", () => {
     expect(res.status).toBe(200);
     const body = res.json<{ openapi: string; info: { title: string } }>();
     expect(body.openapi).toBeString();
-    expect(body.info.title).toBe("Aeron Example API");
+    expect(body.info.title).toBe("VentoStack Example API");
   });
 
   test("GET /docs returns Scalar UI HTML", async () => {

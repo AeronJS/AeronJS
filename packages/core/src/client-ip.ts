@@ -1,4 +1,4 @@
-// @aeron/core - 客户端 IP 解析
+// @ventostack/core - 客户端 IP 解析
 
 /** 客户端 IP 解析选项 */
 export interface ClientIPOptions {

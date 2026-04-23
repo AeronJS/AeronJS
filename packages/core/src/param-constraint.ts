@@ -1,4 +1,4 @@
-// @aeron/core - 路由参数类型注册表
+// @ventostack/core - 路由参数类型注册表
 
 /** 支持的参数类型 */
 export type ParamType = "string" | "int" | "float" | "bool" | "uuid" | "date";

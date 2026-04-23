@@ -1,9 +1,9 @@
 // ============================================================
-// @aeron/openapi — Route Metadata (decorators.ts)
+// @ventostack/openapi — Route Metadata (decorators.ts)
 // 函数式路由元数据定义与 OpenAPI 转换
 // ============================================================
 
-import type { Router, SchemaField, RouteSchemaConfig } from "@aeron/core";
+import type { Router, SchemaField, RouteSchemaConfig } from "@ventostack/core";
 import type {
   OpenAPIGenerator,
   OpenAPIOperation,
@@ -288,7 +288,7 @@ function getStatusDescription(statusCode: string): string {
 
 /**
  * 自动将 Router 中已注册的所有路由同步到 OpenAPIGenerator
- * @param router - Aeron 路由实例
+ * @param router - VentoStack 路由实例
  * @param generator - OpenAPI 生成器实例
  *
  * 读取逻辑（优先级从高到低）：

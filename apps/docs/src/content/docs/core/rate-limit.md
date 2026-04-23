@@ -8,7 +8,7 @@ description: 使用 createRateLimiter 保护应用免受暴力攻击和过载
 ## 基本用法
 
 ```typescript
-import { createRateLimiter } from "@aeron/core";
+import { createRateLimiter } from "@ventostack/core";
 
 const limiter = createRateLimiter({
   windowMs: 60_000,  // 时间窗口：1 分钟

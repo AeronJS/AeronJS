@@ -1,18 +1,18 @@
 {
-  "name": "aeron-example",
+  "name": "ventostack-example",
   "version": "0.1.0",
   "type": "module",
   "private": true,
   "dependencies": {
-    "@aeron/core": "workspace:*",
-    "@aeron/database": "workspace:*",
-    "@aeron/cache": "workspace:*",
-    "@aeron/auth": "workspace:*",
-    "@aeron/events": "workspace:*",
-    "@aeron/observability": "workspace:*"
+    "@ventostack/core": "workspace:*",
+    "@ventostack/database": "workspace:*",
+    "@ventostack/cache": "workspace:*",
+    "@ventostack/auth": "workspace:*",
+    "@ventostack/events": "workspace:*",
+    "@ventostack/observability": "workspace:*"
   },
   "devDependencies": {
-    "@aeron/testing": "workspace:*",
+    "@ventostack/testing": "workspace:*",
     "bun-types": "latest"
   }
 }

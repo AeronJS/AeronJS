@@ -1,5 +1,5 @@
 /**
- * @aeron/cli — Generate Command
+ * @ventostack/cli — Generate Command
  *
  * 提供代码脚手架生成功能，支持 controller、model、migration 三种类型。
  */
@@ -13,7 +13,7 @@ import type { Command } from "../cli";
  */
 function controllerTemplate(name: string): string {
   return `// ${name} Controller
-import type { Context } from "@aeron/core";
+import type { Context } from "@ventostack/core";
 
 export function create${name}Controller() {
   return {
@@ -52,7 +52,7 @@ export function create${name}Controller() {
 function modelTemplate(name: string): string {
   const tableName = `${name.toLowerCase()}s`;
   return `// ${name} Model
-import { defineModel, column } from "@aeron/database";
+import { defineModel, column } from "@ventostack/database";
 
 export const ${name}Model = defineModel("${tableName}", {
   id: column.bigint({ primary: true, autoIncrement: true }),
@@ -71,7 +71,7 @@ export const ${name}Model = defineModel("${tableName}", {
  */
 function migrationTemplate(name: string, timestamp: string): string {
   return `// Migration: ${name}
-import type { Migration } from "@aeron/database";
+import type { Migration } from "@ventostack/database";
 
 export const migration: Migration = {
   name: "${timestamp}_${name}",
@@ -130,7 +130,7 @@ export function createGenerateCommand(opts?: GenerateOptions): Command {
       const name = positional[1];
 
       if (!type || !name) {
-        console.error("Usage: aeron generate <type> <name>");
+        console.error("Usage: ventostack generate <type> <name>");
         console.error("Types: controller, model, migration");
         return;
       }

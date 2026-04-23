@@ -12,7 +12,7 @@ description: 使用 createJWT 实现无状态 JSON Web Token 认证
 推荐在初始化时配置默认密钥和选项，后续 `sign` / `verify` 无需重复传入：
 
 ```typescript
-import { createJWT } from "@aeron/auth";
+import { createJWT } from "@ventostack/auth";
 
 const jwt = createJWT({
   secret: process.env.JWT_SECRET!,

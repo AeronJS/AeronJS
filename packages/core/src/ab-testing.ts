@@ -1,4 +1,4 @@
-// @aeron/core - A/B 测试与灰度发布
+// @ventostack/core - A/B 测试与灰度发布
 
 /** A/B 测试变体 */
 export interface ABTestVariant {

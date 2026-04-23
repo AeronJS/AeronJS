@@ -1,4 +1,4 @@
-// @aeron/core - Schema 类型推导与运行时校验
+// @ventostack/core - Schema 类型推导与运行时校验
 // 为路由配置提供统一的类型声明、编译期推导和运行时转换/校验
 
 /** 支持的 schema 字段类型 */

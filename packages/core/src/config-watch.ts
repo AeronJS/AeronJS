@@ -1,4 +1,4 @@
-// @aeron/core - 配置动态热更新
+// @ventostack/core - 配置动态热更新
 
 /** 配置热更新监控器选项 */
 export interface ConfigWatcherOptions {

@@ -13,12 +13,12 @@ describe("createTOTP", () => {
 
   test("generateURI produces correct otpauth format", () => {
     const secret = "JBSWY3DPEHPK3PXP";
-    const uri = totp.generateURI(secret, "Aeron", "user@example.com");
+    const uri = totp.generateURI(secret, "VentoStack", "user@example.com");
     expect(uri).toStartWith("otpauth://totp/");
-    expect(uri).toContain("Aeron");
+    expect(uri).toContain("VentoStack");
     expect(uri).toContain("user%40example.com");
     expect(uri).toContain(`secret=${secret}`);
-    expect(uri).toContain("issuer=Aeron");
+    expect(uri).toContain("issuer=VentoStack");
     expect(uri).toContain("digits=6");
     expect(uri).toContain("period=30");
     expect(uri).toContain("algorithm=SHA1");

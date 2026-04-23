@@ -1,9 +1,9 @@
 /**
- * @aeron/auth - JWT 签发与验证
+ * @ventostack/auth - JWT 签发与验证
  * 基于 Web Crypto API，仅允许 HMAC 算法（HS256/HS384/HS512）
  */
 
-import { UnauthorizedError } from "@aeron/core";
+import { UnauthorizedError } from "@ventostack/core";
 
 /** 支持的 JWT 签名算法 */
 export type JWTAlgorithm = "HS256" | "HS384" | "HS512";

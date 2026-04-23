@@ -1,5 +1,5 @@
 /**
- * @aeron/observability — Structured Logger
+ * @ventostack/observability — Structured Logger
  * 提供结构化 JSON 日志输出、级别过滤、子记录器继承与自动脱敏能力
  * 支持通过 enabled 开关完全禁用（返回 no-op 记录器），禁用时不产生任何副作用
  */

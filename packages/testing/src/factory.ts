@@ -1,5 +1,5 @@
 /**
- * @aeron/testing - 测试数据工厂
+ * @ventostack/testing - 测试数据工厂
  * 提供类型安全的测试数据生成、字段覆盖与序列/随机/UUID 辅助生成器
  */
 

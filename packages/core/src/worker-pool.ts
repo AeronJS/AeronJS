@@ -1,4 +1,4 @@
-// @aeron/core - Worker Pool（Bun Worker Threads）
+// @ventostack/core - Worker Pool（Bun Worker Threads）
 
 /** Worker 任务 */
 export interface WorkerTask<T = unknown> {

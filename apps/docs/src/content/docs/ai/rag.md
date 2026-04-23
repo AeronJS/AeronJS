@@ -16,9 +16,9 @@ RAG 工作流程：
 ## 基本用法
 
 ```typescript
-import { createRAGPipeline } from "@aeron/ai";
-import { createLLMAdapter } from "@aeron/ai";
-import { createEmbeddingAdapter } from "@aeron/ai";
+import { createRAGPipeline } from "@ventostack/ai";
+import { createLLMAdapter } from "@ventostack/ai";
+import { createEmbeddingAdapter } from "@ventostack/ai";
 
 const llm = createLLMAdapter({ provider: "openai", model: "gpt-4o" });
 const embedder = createEmbeddingAdapter({ provider: "openai", model: "text-embedding-3-small" });
@@ -37,7 +37,7 @@ const rag = createRAGPipeline({
 await rag.ingest([
   {
     id: "doc-1",
-    content: "Aeron 是一个 Bun 原生的后端框架...",
+    content: "VentoStack 是一个 Bun 原生的后端框架...",
     metadata: { source: "readme", category: "intro" },
   },
   {
@@ -64,7 +64,7 @@ console.log(answer.sources); // 参考文档来源
 
 // 带自定义 Prompt
 const answer = await rag.query("如何处理错误？", {
-  systemPrompt: "你是 Aeron 框架的技术支持助手，请基于提供的文档回答问题。",
+  systemPrompt: "你是 VentoStack 框架的技术支持助手，请基于提供的文档回答问题。",
   topK: 5, // 检索最相关的 5 个片段
 });
 ```

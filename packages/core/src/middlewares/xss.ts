@@ -1,4 +1,4 @@
-// @aeron/core - XSS 过滤中间件
+// @ventostack/core - XSS 过滤中间件
 
 import type { Middleware } from "../middleware";
 

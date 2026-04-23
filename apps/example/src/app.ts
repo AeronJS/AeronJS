@@ -1,8 +1,8 @@
-import { createApp, rateLimit, createMemoryRateLimitStore } from "@aeron/core";
-import { createEventBus } from "@aeron/events";
-import { createHealthCheck, createLogger, createMetrics } from "@aeron/observability";
-import { createScalarUIPlugin } from "@aeron/openapi";
-import type { Database } from "@aeron/database";
+import { createApp, rateLimit, createMemoryRateLimitStore } from "@ventostack/core";
+import { createEventBus } from "@ventostack/events";
+import { createHealthCheck, createLogger, createMetrics } from "@ventostack/observability";
+import { createScalarUIPlugin } from "@ventostack/openapi";
+import type { Database } from "@ventostack/database";
 import { config as defaultConfig, type AppConfig } from "./config";
 import { createUserService } from "./services/user-service";
 import { createAuthService } from "./services/auth-service";
@@ -78,13 +78,13 @@ export async function createExampleApp(options: CreateAppOptions) {
   app.use(requestLogger(logger));
 
   app.router.get("/", async (ctx) =>
-    ctx.json({ name: "Aeron Example", version: "1.0.0", env: config.env }),
+    ctx.json({ name: "VentoStack Example", version: "1.0.0", env: config.env }),
   );
 
   registerRoutes({ router: app.router, health, userService, authService, jwtSecret: config.jwtSecret });
 
   const openAPIGen = setupOpenAPI(app.router);
-  app.use(createScalarUIPlugin({ specUrl: "/openapi.json", title: "Aeron Example API Docs" }));
+  app.use(createScalarUIPlugin({ specUrl: "/openapi.json", title: "VentoStack Example API Docs" }));
   app.router.get("/openapi.json", async (ctx) => ctx.json(openAPIGen.generate()));
 
   app.router.get("/metrics", async (_ctx) => {

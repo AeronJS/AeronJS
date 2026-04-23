@@ -1,5 +1,5 @@
 /**
- * @aeron/observability - Grafana Dashboard JSON 模板生成
+ * @ventostack/observability - Grafana Dashboard JSON 模板生成
  * 提供 Grafana Dashboard 与面板的程序化生成能力，支持阈值告警着色
  * 内置 HTTP 服务预设模板（请求速率、P99 延迟、错误率、活跃连接数）
  */
@@ -122,7 +122,7 @@ export function createGrafanaDashboard(config: GrafanaDashboardConfig): GrafanaD
 export function createHttpDashboard(serviceName: string): GrafanaDashboard {
   return createGrafanaDashboard({
     title: `${serviceName} - HTTP Metrics`,
-    tags: ["aeron", "http", serviceName],
+    tags: ["ventostack", "http", serviceName],
     panels: [
       {
         title: "Request Rate",

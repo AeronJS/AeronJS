@@ -1,5 +1,5 @@
 /**
- * @aeron/database — 迁移管理器
+ * @ventostack/database — 迁移管理器
  * 提供版本化数据库结构变更能力，支持 up / down / status 操作
  * 迁移记录持久化于 __migrations 表，保证幂等性与可追溯性
  */

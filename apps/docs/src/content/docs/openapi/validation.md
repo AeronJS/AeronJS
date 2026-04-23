@@ -8,7 +8,7 @@ description: 使用 createRequestValidator 对请求数据进行 Schema 验证
 ## 基本用法
 
 ```typescript
-import { createRequestValidator } from "@aeron/openapi";
+import { createRequestValidator } from "@ventostack/openapi";
 
 const validator = createRequestValidator();
 
@@ -28,7 +28,7 @@ const createUserSchema = {
 ## 作为中间件使用
 
 ```typescript
-import { ValidationError } from "@aeron/core";
+import { ValidationError } from "@ventostack/core";
 
 // 创建验证中间件
 const validateBody = (schema: object) => async (ctx: Context, next: NextFunction) => {

@@ -1,6 +1,6 @@
-import type { Middleware } from "@aeron/core";
-import { UnauthorizedError, ForbiddenError } from "@aeron/core";
-import { createJWT, type JWTPayload } from "@aeron/auth";
+import type { Middleware } from "@ventostack/core";
+import { UnauthorizedError, ForbiddenError } from "@ventostack/core";
+import { createJWT, type JWTPayload } from "@ventostack/auth";
 
 const jwt = createJWT();
 

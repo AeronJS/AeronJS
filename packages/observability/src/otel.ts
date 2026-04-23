@@ -1,5 +1,5 @@
 /**
- * @aeron/observability - OpenTelemetry 集成
+ * @ventostack/observability - OpenTelemetry 集成
  * 提供 OpenTelemetry 兼容的 Tracer、Span 与导出器，支持采样率控制与属性继承
  * 适用于与 OTel Collector、Jaeger、Zipkin 等后端集成的场景
  */

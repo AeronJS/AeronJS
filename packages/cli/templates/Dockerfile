@@ -1,4 +1,4 @@
-# Aeron — 生产环境 Dockerfile 模板
+# VentoStack — 生产环境 Dockerfile 模板
 # 多阶段构建，最小化镜像，非 root 运行
 
 FROM oven/bun:1 AS base

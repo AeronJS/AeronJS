@@ -1,5 +1,5 @@
 /**
- * @aeron/observability - Log Hook（发送到 VictoriaLogs / Loki 等）
+ * @ventostack/observability - Log Hook（发送到 VictoriaLogs / Loki 等）
  * 异步批量发送日志到远端日志系统，支持自定义格式化、批量大小与发送间隔
  * 网络失败时自动回退（有界防泄漏），适用于集中式日志收集场景
  */

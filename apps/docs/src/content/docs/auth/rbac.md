@@ -8,7 +8,7 @@ description: 使用 createRBAC 实现基于角色的访问控制
 ## 基本用法
 
 ```typescript
-import { createRBAC } from "@aeron/auth";
+import { createRBAC } from "@ventostack/auth";
 
 const rbac = createRBAC();
 

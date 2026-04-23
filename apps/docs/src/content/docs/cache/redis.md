@@ -7,7 +7,7 @@ description: createRedisAdapter - 用于生产环境的 Redis 缓存
 
 ## 安装
 
-Redis 适配器需要 Redis 服务运行。无需额外安装 npm 包，Aeron 使用原生协议连接：
+Redis 适配器需要 Redis 服务运行。无需额外安装 npm 包，VentoStack 使用原生协议连接：
 
 ```bash
 # macOS
@@ -20,7 +20,7 @@ docker run -d -p 6379:6379 redis:latest
 ## 用法
 
 ```typescript
-import { createCache, createRedisAdapter } from "@aeron/cache";
+import { createCache, createRedisAdapter } from "@ventostack/cache";
 
 const cache = createCache({
   adapter: createRedisAdapter({

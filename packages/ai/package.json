@@ -1,5 +1,5 @@
 {
-  "name": "@aeron/ai",
+  "name": "@ventostack/ai",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@aeron/core": "workspace:*",
+    "@ventostack/core": "workspace:*",
     "ajv": "^8.18.0"
   },
   "devDependencies": {

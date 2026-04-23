@@ -1,4 +1,4 @@
-// @aeron/cli - Password Command Tests
+// @ventostack/cli - Password Command Tests
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { createPasswordCommand } from "../commands/password";
 
@@ -26,7 +26,7 @@ describe("createPasswordCommand", () => {
     const cmd = createPasswordCommand();
     await cmd.action({});
 
-    expect(errorSpy).toHaveBeenCalledWith("Usage: aeron password <plaintext>");
+    expect(errorSpy).toHaveBeenCalledWith("Usage: ventostack password <plaintext>");
   });
 
   test("hashes password and outputs result", async () => {

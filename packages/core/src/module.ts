@@ -1,4 +1,4 @@
-// @aeron/core - 模块系统
+// @ventostack/core - 模块系统
 
 import type { Router } from "./router";
 

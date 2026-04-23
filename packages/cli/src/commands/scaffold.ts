@@ -1,7 +1,7 @@
 /**
- * @aeron/cli — 项目初始化脚手架（scaffold）
+ * @ventostack/cli — 项目初始化脚手架（scaffold）
  *
- * 提供 create 命令，用于生成新的 Aeron 项目目录结构，
+ * 提供 create 命令，用于生成新的 VentoStack 项目目录结构，
  * 包含 package.json、tsconfig.json、入口文件、Dockerfile 等基础文件。
  */
 
@@ -60,13 +60,13 @@ const TSCONFIG_TEMPLATE = JSON.stringify(
  * 入口文件模板内容
  * 使用 {app_name} 作为占位符，后续会被替换为实际项目名
  */
-const INDEX_TEMPLATE = `// ${"{app_name}"} - powered by Aeron
-import { createApp, createRouter } from "@aeron/core";
+const INDEX_TEMPLATE = `// ${"{app_name}"} - powered by VentoStack
+import { createApp, createRouter } from "@ventostack/core";
 
 const router = createRouter();
 
 router.get("/", async (ctx) => {
-  return ctx.json({ message: "Hello from Aeron!" });
+  return ctx.json({ message: "Hello from VentoStack!" });
 });
 
 router.get("/health", async (ctx) => {
@@ -185,7 +185,7 @@ export async function scaffold(options: ScaffoldOptions): Promise<string[]> {
 export function createScaffoldCommand(): Command {
   return {
     name: "create",
-    description: "Create a new Aeron project",
+    description: "Create a new VentoStack project",
     options: [
       { name: "name", alias: "n", description: "Project name", required: true },
       {
@@ -205,7 +205,7 @@ export function createScaffoldCommand(): Command {
       const template = (args.template as "minimal" | "full") ?? "minimal";
       const directory = (args.directory as string) ?? `./${name}`;
 
-      console.log(`Creating Aeron project "${name}" in ${directory}...`);
+      console.log(`Creating VentoStack project "${name}" in ${directory}...`);
       const files = await scaffold({ name, directory, template });
       console.log(`Created ${files.length} files.`);
       console.log("\nNext steps:");

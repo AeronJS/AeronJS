@@ -1,5 +1,5 @@
 /**
- * @aeron/events - 领域事件注册表
+ * @ventostack/events - 领域事件注册表
  * 提供 ORM 生命周期钩子风格的事件注册与触发，支持 beforeCreate/afterCreate 等六种事件类型
  * 适用于实体状态变更监听、审计日志、缓存失效等场景
  */

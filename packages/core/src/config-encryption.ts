@@ -1,4 +1,4 @@
-// @aeron/core - 敏感配置加密存储
+// @ventostack/core - 敏感配置加密存储
 
 /** 配置加密器选项 */
 export interface ConfigEncryptionOptions {

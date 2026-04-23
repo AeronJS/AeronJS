@@ -8,7 +8,7 @@ description: 使用 createWebhookManager 向外部系统发送 Webhook 通知
 ## 基本用法
 
 ```typescript
-import { createWebhookManager } from "@aeron/events";
+import { createWebhookManager } from "@ventostack/events";
 
 const webhooks = createWebhookManager({
   secret: process.env.WEBHOOK_SECRET!,

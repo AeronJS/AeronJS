@@ -1,5 +1,5 @@
-import type { Database } from "@aeron/database";
-import { NotFoundError } from "@aeron/core";
+import type { Database } from "@ventostack/database";
+import { NotFoundError } from "@ventostack/core";
 import { userModel, type User } from "../models";
 
 export interface CreateUserInput {

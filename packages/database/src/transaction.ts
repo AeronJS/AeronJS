@@ -1,5 +1,5 @@
 /**
- * @aeron/database — 嵌套事务 / Savepoint 支持
+ * @ventostack/database — 嵌套事务 / Savepoint 支持
  * 提供显式事务控制、隔离级别、只读模式与嵌套 Savepoint 能力
  * 嵌套事务通过 Savepoint 实现，支持深度追踪与活跃状态检测
  */

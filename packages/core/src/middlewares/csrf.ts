@@ -1,4 +1,4 @@
-// @aeron/core - CSRF 防护中间件
+// @ventostack/core - CSRF 防护中间件
 
 import { timingSafeEqual } from "node:crypto";
 import type { Context } from "../context";

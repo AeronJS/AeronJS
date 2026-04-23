@@ -1,5 +1,5 @@
 /**
- * @aeron/openapi — 接口变更 Diff
+ * @ventostack/openapi — 接口变更 Diff
  *
  * 提供两个 OpenAPI 规范之间的差异计算与 Markdown 报告生成能力。
  * 可识别新增、删除、修改和废弃端点，并检测破坏性变更。

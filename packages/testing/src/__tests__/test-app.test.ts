@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { createApp } from "@aeron/core";
-import type { Context } from "@aeron/core";
+import { createApp } from "@ventostack/core";
+import type { Context } from "@ventostack/core";
 import { createTestApp } from "../test-app";
 import { createTestClient } from "../test-client";
 

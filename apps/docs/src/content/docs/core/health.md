@@ -8,7 +8,7 @@ description: 使用 createHealthCheck 为应用添加健康检查端点
 ## 基本用法
 
 ```typescript
-import { createApp, createRouter, createHealthCheck } from "@aeron/core";
+import { createApp, createRouter, createHealthCheck } from "@ventostack/core";
 
 const health = createHealthCheck();
 const router = createRouter();
@@ -23,7 +23,7 @@ router.get("/health", async (ctx) => {
 ## 自定义检查项
 
 ```typescript
-import { createHealthCheck } from "@aeron/core";
+import { createHealthCheck } from "@ventostack/core";
 
 const health = createHealthCheck();
 

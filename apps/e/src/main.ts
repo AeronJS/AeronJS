@@ -1,9 +1,9 @@
-import { createApp, createRouter, requestLogger, errorHandler, type Middleware, cors, requestId } from "@aeron/core";
-import { createDatabase, defineModel, column } from "@aeron/database";
-import { createJWT, createRBAC, createPasswordHasher } from "@aeron/auth";
-import { createCache, createMemoryAdapter } from "@aeron/cache";
-import { createLogger } from "@aeron/observability";
-import { createOpenAPIGenerator, syncRouterToOpenAPI, createScalarUIPlugin } from "@aeron/openapi";
+import { createApp, createRouter, requestLogger, errorHandler, type Middleware, cors, requestId } from "@ventostack/core";
+import { createDatabase, defineModel, column } from "@ventostack/database";
+import { createJWT, createRBAC, createPasswordHasher } from "@ventostack/auth";
+import { createCache, createMemoryAdapter } from "@ventostack/cache";
+import { createLogger } from "@ventostack/observability";
+import { createOpenAPIGenerator, syncRouterToOpenAPI, createScalarUIPlugin } from "@ventostack/openapi";
 
 // 定义数据模型
 const UserModel = defineModel("users", {
@@ -248,9 +248,9 @@ app.use(router);
 const openAPIGen = createOpenAPIGenerator();
 
 openAPIGen.setInfo({
-  title: "Aeron E App API",
+  title: "VentoStack E App API",
   version: "1.0.0",
-  description: "Aeron E 示例应用的 OpenAPI 文档",
+  description: "VentoStack E 示例应用的 OpenAPI 文档",
 });
 
 openAPIGen.addServer({
@@ -269,7 +269,7 @@ openAPIGen.addSecurityScheme("bearerAuth", {
 syncRouterToOpenAPI(router, openAPIGen);
 
 // Scalar UI 文档页面
-app.use(createScalarUIPlugin({ specUrl: "/openapi.json", title: "Aeron E API Docs" }));
+app.use(createScalarUIPlugin({ specUrl: "/openapi.json", title: "VentoStack E API Docs" }));
 
 // OpenAPI JSON 端点
 app.router.get("/openapi.json", async (ctx) => ctx.json(openAPIGen.generate()));

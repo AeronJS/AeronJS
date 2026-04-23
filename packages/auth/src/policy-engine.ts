@@ -1,5 +1,5 @@
 /**
- * @aeron/auth - 策略引擎
+ * @ventostack/auth - 策略引擎
  * 类 Casbin 的策略模型，支持通配符匹配与条件表达式
  * 默认 deny，只有匹配 allow 规则且无 deny 规则时才允许访问
  */

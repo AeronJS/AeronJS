@@ -1,4 +1,4 @@
-// @aeron/observability - 审计日志测试
+// @ventostack/observability - 审计日志测试
 
 import { describe, expect, it } from "bun:test";
 import { createAuditLog } from "../audit";

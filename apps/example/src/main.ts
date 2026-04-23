@@ -33,5 +33,5 @@ process.on("SIGINT", async () => {
 
 // ── 启动 ────────────────────────────────────────────
 
-logger.info("starting Aeron example app", { port: config.port, env: config.env });
+logger.info("starting VentoStack example app", { port: config.port, env: config.env });
 await app.listen();

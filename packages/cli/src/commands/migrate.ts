@@ -1,10 +1,10 @@
 /**
- * @aeron/cli — Migrate Command
+ * @ventostack/cli — Migrate Command
  *
  * 提供数据库迁移的执行、状态查询和迁移文件生成功能。
  */
 
-import type { MigrationRunner } from "@aeron/database";
+import type { MigrationRunner } from "@ventostack/database";
 import type { Command } from "../cli";
 
 /** Migrate 命令选项 */
@@ -38,7 +38,7 @@ function generateTimestamp(): string {
  */
 function migrationFileTemplate(name: string, timestamp: string): string {
   return `// Migration: ${name}
-import type { Migration } from "@aeron/database";
+import type { Migration } from "@ventostack/database";
 
 export const migration: Migration = {
   name: "${timestamp}_${name}",
@@ -83,7 +83,7 @@ export function createMigrateCommand(opts?: MigrateOptions): Command {
       const subcommand = positional[0];
 
       if (!subcommand) {
-        console.error("Usage: aeron migrate <up|down|status|generate> [options]");
+        console.error("Usage: ventostack migrate <up|down|status|generate> [options]");
         return;
       }
 
@@ -140,7 +140,7 @@ export function createMigrateCommand(opts?: MigrateOptions): Command {
         case "generate": {
           const name = positional[1];
           if (!name) {
-            console.error("Usage: aeron migrate generate <name>");
+            console.error("Usage: ventostack migrate generate <name>");
             return;
           }
           const timestamp = getTimestamp();
@@ -153,7 +153,7 @@ export function createMigrateCommand(opts?: MigrateOptions): Command {
         }
         default:
           console.error(`Unknown subcommand: ${subcommand}`);
-          console.error("Usage: aeron migrate <up|down|status|generate> [options]");
+          console.error("Usage: ventostack migrate <up|down|status|generate> [options]");
       }
     },
   };

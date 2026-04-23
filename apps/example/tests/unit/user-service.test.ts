@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { createTestDatabase, createTestUserService } from "../setup";
-import type { Database } from "@aeron/database";
+import type { Database } from "@ventostack/database";
 
 describe("user-service", () => {
   let db: Database;

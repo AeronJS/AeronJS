@@ -1,5 +1,5 @@
 /**
- * @aeron/observability — Request Tracing
+ * @ventostack/observability — Request Tracing
  * 提供分布式追踪的 Span 创建、属性设置、事件记录与上下文传递能力
  * 基于内存存储活跃与已完成 Span，支持父子关系与状态标记
  */

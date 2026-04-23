@@ -8,7 +8,7 @@ description: createMemoryAdapter - 用于开发和测试的内存缓存
 ## 用法
 
 ```typescript
-import { createCache, createMemoryAdapter } from "@aeron/cache";
+import { createCache, createMemoryAdapter } from "@ventostack/cache";
 
 const cache = createCache({
   adapter: createMemoryAdapter(),

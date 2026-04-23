@@ -3,14 +3,14 @@ title: 事件总线
 description: 使用 createEventBus 和 defineEvent 实现类型安全的事件驱动架构
 ---
 
-`@aeron/events` 提供了类型安全的事件总线，支持同步和异步事件处理、事件过滤和事件中间件。
+`@ventostack/events` 提供了类型安全的事件总线，支持同步和异步事件处理、事件过滤和事件中间件。
 
 ## 定义事件
 
 使用 `defineEvent` 定义带有类型约束的事件：
 
 ```typescript
-import { defineEvent } from "@aeron/events";
+import { defineEvent } from "@ventostack/events";
 
 // 定义事件类型
 const UserRegistered = defineEvent<{
@@ -35,7 +35,7 @@ const PaymentFailed = defineEvent<{
 ## 创建事件总线
 
 ```typescript
-import { createEventBus } from "@aeron/events";
+import { createEventBus } from "@ventostack/events";
 
 const bus = createEventBus();
 ```

@@ -1,5 +1,5 @@
 /**
- * @aeron/auth - Session 管理
+ * @ventostack/auth - Session 管理
  * 提供基于 SessionStore 抽象的 Session 创建、查询、更新、销毁与续期能力
  * 内置内存存储实现，支持 TTL 过期检查与键前缀隔离
  */

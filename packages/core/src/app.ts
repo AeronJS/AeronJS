@@ -1,6 +1,6 @@
-// @aeron/core - 应用入口
+// @ventostack/core - 应用入口
 
-import { AeronError } from "./errors";
+import { VentoStackError } from "./errors";
 import { type Lifecycle, createLifecycle } from "./lifecycle";
 import type { Middleware } from "./middleware";
 import type { Plugin } from "./plugin";
@@ -38,8 +38,8 @@ export interface AppUrl {
   path: string;
 }
 
-/** Aeron 应用实例接口 */
-export interface AeronApp {
+/** VentoStack 应用实例接口 */
+export interface VentoStackApp {
   /** 路由实例 */
   readonly router: Router;
   /** 生命周期管理器 */
@@ -51,7 +51,7 @@ export interface AeronApp {
    * @param item - Plugin、Middleware 或 Router
    * @returns 当前应用实例，支持链式调用
    */
-  use(item: Plugin | Middleware | Router): AeronApp;
+  use(item: Plugin | Middleware | Router): VentoStackApp;
   /**
    * 启动 HTTP 服务
    * @param port - 可选覆盖端口
@@ -68,11 +68,11 @@ export interface AeronApp {
 }
 
 /**
- * 创建 Aeron 应用实例
+ * 创建 VentoStack 应用实例
  * @param config - 应用配置
- * @returns AeronApp 实例
+ * @returns VentoStackApp 实例
  */
-export function createApp(config?: AppConfig): AeronApp {
+export function createApp(config?: AppConfig): VentoStackApp {
   const router = createRouter();
   const lifecycle = createLifecycle();
   const globalMiddleware: Middleware[] = [];
@@ -90,7 +90,7 @@ export function createApp(config?: AppConfig): AeronApp {
    * @returns 统一格式的 Response
    */
   function defaultErrorHandler(error: unknown): Response {
-    if (error instanceof AeronError) {
+    if (error instanceof VentoStackError) {
       return new Response(JSON.stringify({ error: error.errorCode, message: error.message }), {
         status: error.code,
         headers: { "Content-Type": "application/json" },
@@ -153,14 +153,14 @@ export function createApp(config?: AppConfig): AeronApp {
     };
   }
 
-  const app: AeronApp = {
+  const app: VentoStackApp = {
     router,
     lifecycle,
     get urls() {
       return urls;
     },
 
-    use(item: Plugin | Middleware | Router): AeronApp {
+    use(item: Plugin | Middleware | Router): VentoStackApp {
       if (typeof item === "function") {
         globalMiddleware.push(item);
       } else if (isRouter(item)) {

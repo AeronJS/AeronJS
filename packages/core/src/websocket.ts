@@ -1,4 +1,4 @@
-// @aeron/core - WebSocket 路由
+// @ventostack/core - WebSocket 路由
 
 /** WebSocket 消息结构 */
 export interface WSMessage {

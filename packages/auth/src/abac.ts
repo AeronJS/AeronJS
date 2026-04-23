@@ -1,5 +1,5 @@
 /**
- * @aeron/auth - 基于属性的访问控制 (ABAC)
+ * @ventostack/auth - 基于属性的访问控制 (ABAC)
  * 默认 deny，deny 策略优先于 allow；基于内存 Map 存储策略，支持主体/资源/上下文属性匹配
  */
 

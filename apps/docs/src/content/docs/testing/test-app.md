@@ -3,14 +3,14 @@ title: 测试应用
 description: 使用 createTestApp 编写集成测试
 ---
 
-`@aeron/testing` 提供了测试工具，让你可以在不启动真实服务器的情况下测试路由处理程序。
+`@ventostack/testing` 提供了测试工具，让你可以在不启动真实服务器的情况下测试路由处理程序。
 
 ## createTestApp
 
 ```typescript
-import { createTestApp } from "@aeron/testing";
+import { createTestApp } from "@ventostack/testing";
 import { describe, test, expect } from "bun:test";
-import { createRouter } from "@aeron/core";
+import { createRouter } from "@ventostack/core";
 
 const router = createRouter();
 router.get("/hello", async (ctx) => ctx.json({ message: "Hello!" }));
@@ -53,7 +53,7 @@ const authRes = await app.request("GET", "/protected", {
 ## 测试中间件
 
 ```typescript
-import { createTestApp } from "@aeron/testing";
+import { createTestApp } from "@ventostack/testing";
 import { authMiddleware } from "../middleware/auth";
 
 const app = createTestApp();
@@ -81,8 +81,8 @@ test("accepts valid token", async () => {
 ## 与真实数据库测试
 
 ```typescript
-import { createTestApp } from "@aeron/testing";
-import { createQueryBuilder } from "@aeron/database";
+import { createTestApp } from "@ventostack/testing";
+import { createQueryBuilder } from "@ventostack/database";
 
 let db: QueryBuilder;
 

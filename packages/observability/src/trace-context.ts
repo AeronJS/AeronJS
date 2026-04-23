@@ -1,5 +1,5 @@
 /**
- * @aeron/observability - W3C TraceContext 传播
+ * @ventostack/observability - W3C TraceContext 传播
  * 提供 W3C traceparent/tracestate 与 B3（Zipkin）两种链路上下文传播格式
  * 用于在 HTTP 请求间传递和提取分布式追踪信息，保证链路连续性
  */
@@ -55,7 +55,7 @@ export function createW3CTraceContextPropagator(): TraceContextPropagator {
       // tracestate 可以传播自定义数据
       const existingState = headers.get("tracestate");
       if (!existingState) {
-        headers.set("tracestate", `aeron=${context.spanId}`);
+        headers.set("tracestate", `ventostack=${context.spanId}`);
       }
     },
   };

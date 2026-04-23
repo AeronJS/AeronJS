@@ -1,10 +1,10 @@
 // ============================================================
-// @aeron/openapi — 从路由 Schema 推导 OpenAPI
+// @ventostack/openapi — 从路由 Schema 推导 OpenAPI
 // ============================================================
 
 import type { OpenAPIParameter, OpenAPIRequestBody, OpenAPIOperation, OpenAPIResponse } from "./generator";
 import type { OpenAPISchema } from "./schema-builder";
-import type { RouteSchemaConfig, SchemaField, SchemaFieldType } from "@aeron/core";
+import type { RouteSchemaConfig, SchemaField, SchemaFieldType } from "@ventostack/core";
 
 /**
  * 将 SchemaFieldType 映射为 OpenAPI 类型

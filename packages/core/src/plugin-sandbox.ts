@@ -1,4 +1,4 @@
-// @aeron/core - 插件隔离
+// @ventostack/core - 插件隔离
 
 import type { Plugin } from "./plugin";
 

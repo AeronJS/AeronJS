@@ -1,5 +1,5 @@
 /**
- * @aeron/auth - TOTP 双因素认证 (RFC 6238)
+ * @ventostack/auth - TOTP 双因素认证 (RFC 6238)
  * 基于 Web Crypto API HMAC 实现，支持密钥生成、URI 生成、验证码生成与校验
  * 兼容 Google Authenticator 等标准 TOTP 客户端
  */

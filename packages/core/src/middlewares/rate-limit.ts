@@ -1,4 +1,4 @@
-// @aeron/core - 限流中间件
+// @ventostack/core - 限流中间件
 
 import type { Context } from "../context";
 import type { Middleware } from "../middleware";

@@ -1,4 +1,4 @@
-// @aeron/core - Feature Toggle（特性开关）
+// @ventostack/core - Feature Toggle（特性开关）
 
 /** 特性开关定义 */
 export interface FeatureFlag {

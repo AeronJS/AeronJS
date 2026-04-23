@@ -1,4 +1,4 @@
-// @aeron/core - 统一响应格式
+// @ventostack/core - 统一响应格式
 
 /** API 统一响应结构 */
 export interface ApiResponse<T = unknown> {

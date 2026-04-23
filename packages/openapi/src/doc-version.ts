@@ -1,5 +1,5 @@
 /**
- * @aeron/openapi — 文档版本管理
+ * @ventostack/openapi — 文档版本管理
  *
  * 提供多版本 OpenAPI 规范的存储、查询和差异对比能力。
  */

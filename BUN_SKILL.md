@@ -1048,7 +1048,7 @@ Bun.serve({
   },
 
   // Unix Domain Socket（替代端口）
-  unix: "/tmp/aeron.sock",
+  unix: "/tmp/ventostack.sock",
 
   // WebSocket
   websocket: { /* open / message / close / drain */ },

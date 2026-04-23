@@ -1,6 +1,6 @@
-import type { Middleware } from "@aeron/core";
-import { AeronError } from "@aeron/core";
-import type { Logger } from "@aeron/observability";
+import type { Middleware } from "@ventostack/core";
+import { VentoStackError } from "@ventostack/core";
+import type { Logger } from "@ventostack/observability";
 
 /**
  * 请求日志中间件：记录请求方法、路径、状态码、耗时
@@ -32,7 +32,7 @@ export function errorHandler(logger: Logger): Middleware {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
 
-      if (error instanceof AeronError) {
+      if (error instanceof VentoStackError) {
         logger.error("unhandled error", {
           method: ctx.method,
           path: ctx.path,

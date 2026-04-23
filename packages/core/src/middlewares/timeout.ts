@@ -1,6 +1,8 @@
-// @aeron/core - 超时中间件
+// @ventostack/core - 超时中间件
 
 import type { Middleware } from "../middleware";
+
+const VENTOSTACK_TIMEOUT_SENTINEL = "__VENTOSTACK_TIMEOUT__";
 
 /** 超时中间件配置选项 */
 export interface TimeoutOptions {
@@ -29,7 +31,7 @@ export function timeout(options: TimeoutOptions = {}): Middleware {
         next(),
         new Promise<Response>((_, reject) => {
           controller.signal.addEventListener("abort", () => {
-            reject(new Error("__AERON_TIMEOUT__"));
+            reject(new Error(VENTOSTACK_TIMEOUT_SENTINEL));
           });
         }),
       ]);
@@ -37,7 +39,7 @@ export function timeout(options: TimeoutOptions = {}): Middleware {
       return result;
     } catch (err) {
       clearTimeout(timer);
-      if (err instanceof Error && err.message === "__AERON_TIMEOUT__") {
+      if (err instanceof Error && err.message === VENTOSTACK_TIMEOUT_SENTINEL) {
         return new Response(JSON.stringify({ error: message }), {
           status: 408,
           headers: { "Content-Type": "application/json" },

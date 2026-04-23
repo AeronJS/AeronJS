@@ -8,7 +8,7 @@ description: 使用 createScheduler 管理 cron 和一次性定时任务
 ## 基本用法
 
 ```typescript
-import { createScheduler } from "@aeron/events";
+import { createScheduler } from "@ventostack/events";
 
 const scheduler = createScheduler();
 

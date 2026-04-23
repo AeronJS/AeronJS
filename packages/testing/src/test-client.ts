@@ -1,5 +1,5 @@
 /**
- * @aeron/testing - HTTP 测试客户端
+ * @ventostack/testing - HTTP 测试客户端
  * 提供便捷的 HTTP 请求构建、响应解析与默认头管理能力，支持链式设置请求头
  */
 

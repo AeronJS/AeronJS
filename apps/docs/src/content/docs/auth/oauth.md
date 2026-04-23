@@ -14,7 +14,7 @@ description: 使用 createOAuthProvider 集成第三方 OAuth 认证
 ## 基本配置
 
 ```typescript
-import { createOAuthProvider } from "@aeron/auth";
+import { createOAuthProvider } from "@ventostack/auth";
 
 const github = createOAuthProvider({
   provider: "github",

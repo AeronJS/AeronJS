@@ -3,14 +3,14 @@ title: 查询构建器
 description: 使用 defineModel 和 db.query 构建完全类型安全的 SQL 查询
 ---
 
-Aeron 的查询构建器基于模型定义自动推导 TypeScript 类型，从 `db.query(Model).get()` 到返回结果的每一个字段都有完整类型提示。
+VentoStack 的查询构建器基于模型定义自动推导 TypeScript 类型，从 `db.query(Model).get()` 到返回结果的每一个字段都有完整类型提示。
 
 ## 定义模型
 
 使用 `defineModel` 和 `column` 定义数据模型，列类型会自动映射到 TypeScript 类型：
 
 ```typescript
-import { defineModel, column } from "@aeron/database";
+import { defineModel, column } from "@ventostack/database";
 
 const UserModel = defineModel("users", {
   id: column.bigint({ primary: true, autoIncrement: true }),

@@ -3,12 +3,12 @@ title: 消息队列
 description: 使用 createMemoryMQAdapter 和 createMQAdapterFactory 集成消息队列
 ---
 
-`@aeron/events` 提供了消息队列适配器接口，内置内存实现，可扩展接入 Kafka、RabbitMQ、NATS 等。
+`@ventostack/events` 提供了消息队列适配器接口，内置内存实现，可扩展接入 Kafka、RabbitMQ、NATS 等。
 
 ## 内存消息队列（开发/测试）
 
 ```typescript
-import { createMemoryMQAdapter } from "@aeron/events";
+import { createMemoryMQAdapter } from "@ventostack/events";
 
 const mq = createMemoryMQAdapter();
 
@@ -32,8 +32,8 @@ await mq.subscribe("orders", async (message) => {
 使用 `createMQAdapterFactory` 注册自定义实现：
 
 ```typescript
-import { createMQAdapterFactory } from "@aeron/events";
-import type { MQAdapter, MQAdapterConfig, MQMessage } from "@aeron/events";
+import { createMQAdapterFactory } from "@ventostack/events";
+import type { MQAdapter, MQAdapterConfig, MQMessage } from "@ventostack/events";
 
 // 实现 Kafka 适配器
 function createKafkaAdapter(config: MQAdapterConfig): MQAdapter {

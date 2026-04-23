@@ -1,4 +1,4 @@
-// @aeron/core - 插件注册表
+// @ventostack/core - 插件注册表
 
 /** 插件清单 */
 export interface PluginManifest {

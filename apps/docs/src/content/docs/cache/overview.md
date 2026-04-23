@@ -3,12 +3,12 @@ title: 缓存层
 description: 使用 createCache 添加高性能缓存支持
 ---
 
-`@aeron/cache` 提供了统一的缓存接口，底层可以切换内存缓存或 Redis，无需修改业务代码。
+`@ventostack/cache` 提供了统一的缓存接口，底层可以切换内存缓存或 Redis，无需修改业务代码。
 
 ## 创建缓存
 
 ```typescript
-import { createCache, createMemoryAdapter } from "@aeron/cache";
+import { createCache, createMemoryAdapter } from "@ventostack/cache";
 
 const cache = createCache(createMemoryAdapter());
 ```

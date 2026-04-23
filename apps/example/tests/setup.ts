@@ -1,6 +1,6 @@
 import { Database as SQLiteDB } from "bun:sqlite";
-import { createDatabase, createMigrationRunner } from "@aeron/database";
-import type { Database, SqlExecutor } from "@aeron/database";
+import { createDatabase, createMigrationRunner } from "@ventostack/database";
+import type { Database, SqlExecutor } from "@ventostack/database";
 import { migrations } from "../src/migrations";
 import { createUserService } from "../src/services/user-service";
 import { createAuthService } from "../src/services/auth-service";

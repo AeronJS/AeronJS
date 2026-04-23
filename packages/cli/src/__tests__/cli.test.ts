@@ -1,4 +1,4 @@
-// @aeron/cli - CLI Tests
+// @ventostack/cli - CLI Tests
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { createCLI, run } from "../cli";
 

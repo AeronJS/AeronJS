@@ -1,5 +1,5 @@
 /**
- * @aeron/cli — CLI 模块公共入口
+ * @ventostack/cli — CLI 模块公共入口
  *
  * 提供 CLI 构建器、命令注册以及各类子命令的工厂函数。
  */

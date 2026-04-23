@@ -1,5 +1,5 @@
 /**
- * @aeron/events - 任务可观测（状态 / 重试 / 日志）
+ * @ventostack/events - 任务可观测（状态 / 重试 / 日志）
  * 提供任务全生命周期追踪与日志记录能力，支持 pending/running/completed/failed/retrying/timeout 六种状态
  * 适用于异步任务监控、故障排查与审计追溯
  */

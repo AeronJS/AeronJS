@@ -1,5 +1,5 @@
 /**
- * @aeron/database — 驱动适配器
+ * @ventostack/database — 驱动适配器
  * 提供 PostgreSQL / MySQL / SQLite / MSSQL 的方言抽象，统一占位符、标识符引用、分页、UPSERT 等差异
  * 所有适配器均实现 DriverAdapter 接口，屏蔽底层数据库差异
  */

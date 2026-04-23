@@ -1,25 +1,25 @@
-# Aeron 框架
+# VentoStack 框架
 
 [English](./README_en.md)
 
-Aeron 是一个基于 Bun 运行时构建的全栈后端框架，专为高性能和极致开发体验而设计。它遵循函数式优先的设计原则——无 class、无装饰器、显式依赖注入。
+VentoStack 是一个基于 Bun 运行时构建的全栈后端框架，专为高性能和极致开发体验而设计。它遵循函数式优先的设计原则——无 class、无装饰器、显式依赖注入。
 
 ## 模块概览
 
-Aeron 将后端能力拆分为可按需组合的独立包：
+VentoStack 将后端能力拆分为可按需组合的独立包：
 
 | 包名 | 说明 |
 |---|---|
-| `@aeron/core` | HTTP 服务、路由、中间件、配置管理、生命周期、错误处理 |
-| `@aeron/database` | 查询构建器、数据库迁移、连接池、事务管理 |
-| `@aeron/cache` | 缓存层，支持内存适配器与 Redis 适配器 |
-| `@aeron/auth` | JWT、RBAC 权限、OAuth 登录、Session 管理、MFA |
-| `@aeron/events` | 事件总线、发布订阅、事件溯源、CQRS |
-| `@aeron/observability` | 指标采集、链路追踪、结构化日志、健康检查 |
-| `@aeron/openapi` | OpenAPI 3.1 文档生成与请求校验 |
-| `@aeron/testing` | 测试工具、Mock 辅助、测试应用封装 |
-| `@aeron/ai` | AI 集成：LLM 适配器、RAG 流水线、流式响应 |
-| `@aeron/cli` | 脚手架与代码生成 CLI 工具 |
+| `@ventostack/core` | HTTP 服务、路由、中间件、配置管理、生命周期、错误处理 |
+| `@ventostack/database` | 查询构建器、数据库迁移、连接池、事务管理 |
+| `@ventostack/cache` | 缓存层，支持内存适配器与 Redis 适配器 |
+| `@ventostack/auth` | JWT、RBAC 权限、OAuth 登录、Session 管理、MFA |
+| `@ventostack/events` | 事件总线、发布订阅、事件溯源、CQRS |
+| `@ventostack/observability` | 指标采集、链路追踪、结构化日志、健康检查 |
+| `@ventostack/openapi` | OpenAPI 3.1 文档生成与请求校验 |
+| `@ventostack/testing` | 测试工具、Mock 辅助、测试应用封装 |
+| `@ventostack/ai` | AI 集成：LLM 适配器、RAG 流水线、流式响应 |
+| `@ventostack/cli` | 脚手架与代码生成 CLI 工具 |
 
 ## 设计原则
 
@@ -37,18 +37,18 @@ Aeron 将后端能力拆分为可按需组合的独立包：
 ### 安装
 
 ```bash
-bun add @aeron/core
+bun add @ventostack/core
 ```
 
 ### 基础应用
 
 ```typescript
-import { createApp, createRouter } from "@aeron/core";
+import { createApp, createRouter } from "@ventostack/core";
 
 const router = createRouter();
 
 router.get("/", async (ctx) => {
-  return ctx.json({ message: "你好，Aeron！" });
+  return ctx.json({ message: "你好，VentoStack！" });
 });
 
 const app = createApp({ port: 3000 });
@@ -59,8 +59,8 @@ await app.listen();
 ### 集成认证
 
 ```typescript
-import { createApp, createRouter } from "@aeron/core";
-import { createJWT, createRBAC } from "@aeron/auth";
+import { createApp, createRouter } from "@ventostack/core";
+import { createJWT, createRBAC } from "@ventostack/auth";
 
 const jwt = createJWT({ secret: process.env.JWT_SECRET! });
 const rbac = createRBAC();
@@ -90,7 +90,7 @@ router.get("/protected", async (ctx) => {
 ### 集成数据库
 
 ```typescript
-import { createDatabase, defineModel, column } from "@aeron/database";
+import { createDatabase, defineModel, column } from "@ventostack/database";
 
 const UserModel = defineModel("users", {
   id: column.bigint({ primary: true, autoIncrement: true }),
@@ -114,7 +114,7 @@ const users = await db
 ### 集成缓存
 
 ```typescript
-import { createCache, createMemoryAdapter } from "@aeron/cache";
+import { createCache, createMemoryAdapter } from "@ventostack/cache";
 
 const cache = createCache(createMemoryAdapter());
 
@@ -182,7 +182,7 @@ bun test packages/core/src/__tests__/router.test.ts
 
 ## 环境配置
 
-Aeron 遵循十二要素应用方法论，使用环境变量进行配置。各包的详细配置项请参阅对应文档。
+VentoStack 遵循十二要素应用方法论，使用环境变量进行配置。各包的详细配置项请参阅对应文档。
 
 ```bash
 PORT=3000

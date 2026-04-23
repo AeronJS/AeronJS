@@ -1,5 +1,5 @@
 /**
- * @aeron/auth - Password hashing with Bun.password
+ * @ventostack/auth - Password hashing with Bun.password
  * Uses bcrypt algorithm by default. Do NOT store plaintext passwords.
  */
 

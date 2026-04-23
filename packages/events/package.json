@@ -1,5 +1,5 @@
 {
-  "name": "@aeron/events",
+  "name": "@ventostack/events",
   "version": "0.1.0",
   "type": "module",
   "main": "src/index.ts",
@@ -9,7 +9,7 @@
     "./*": "./src/*"
   },
   "dependencies": {
-    "@aeron/core": "workspace:*"
+    "@ventostack/core": "workspace:*"
   },
   "devDependencies": {
     "bun-types": "latest"

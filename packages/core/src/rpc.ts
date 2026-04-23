@@ -1,4 +1,4 @@
-// @aeron/core - 内部 RPC（service-to-service）
+// @ventostack/core - 内部 RPC（service-to-service）
 
 /** RPC 方法定义 */
 export interface RPCMethod<TReq = unknown, TRes = unknown> {

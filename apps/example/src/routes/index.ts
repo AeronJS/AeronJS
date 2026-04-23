@@ -1,5 +1,5 @@
-import type { Router } from "@aeron/core";
-import type { HealthCheck } from "@aeron/observability";
+import type { Router } from "@ventostack/core";
+import type { HealthCheck } from "@ventostack/observability";
 import type { createUserService } from "../services/user-service";
 import type { createAuthService } from "../services/auth-service";
 import { requireAuth } from "../middleware/auth";

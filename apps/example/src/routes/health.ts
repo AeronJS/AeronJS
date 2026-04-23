@@ -1,5 +1,5 @@
-import type { Router } from "@aeron/core";
-import type { HealthCheck } from "@aeron/observability";
+import type { Router } from "@ventostack/core";
+import type { HealthCheck } from "@ventostack/observability";
 
 export function registerHealthRoutes(router: Router, health: HealthCheck): void {
   router.get("/health/live", (ctx) => {

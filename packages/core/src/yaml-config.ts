@@ -1,4 +1,4 @@
-// @aeron/core - YAML 配置文件支持
+// @ventostack/core - YAML 配置文件支持
 
 /**
  * 解析 YAML 字符串为 JavaScript 对象。

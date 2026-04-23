@@ -8,7 +8,7 @@ description: 使用 createAlertManager 配置应用告警规则
 ## 基本用法
 
 ```typescript
-import { createAlertManager } from "@aeron/observability";
+import { createAlertManager } from "@ventostack/observability";
 
 const alertManager = createAlertManager({
   channels: {

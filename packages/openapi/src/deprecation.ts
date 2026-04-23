@@ -1,5 +1,5 @@
 /**
- * @aeron/openapi — 旧版本兼容与废弃通知 + 向后兼容策略
+ * @ventostack/openapi — 旧版本兼容与废弃通知 + 向后兼容策略
  *
  * 提供 API 废弃声明管理、Sunset / Deprecation header 生成以及兼容性守卫能力。
  */

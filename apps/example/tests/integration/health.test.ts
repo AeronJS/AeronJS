@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { setupIntegrationTest, teardownIntegrationTest } from "./setup";
-import type { TestAppInstance, TestClient } from "@aeron/testing";
+import type { TestAppInstance, TestClient } from "@ventostack/testing";
 
 describe("health endpoints", () => {
   let testApp: TestAppInstance;
@@ -20,7 +20,7 @@ describe("health endpoints", () => {
     const res = await client.get("/");
     expect(res.status).toBe(200);
     const body = res.json<{ name: string; version: string; env: string }>();
-    expect(body.name).toBe("Aeron Example");
+    expect(body.name).toBe("VentoStack Example");
     expect(body.version).toBe("1.0.0");
   });
 

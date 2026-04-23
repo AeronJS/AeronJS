@@ -1,4 +1,4 @@
-// @aeron/cli - CLI 入口和命令路由
+// @ventostack/cli - CLI 入口和命令路由
 
 /** 命令选项定义 */
 export interface CommandOption {
@@ -178,7 +178,7 @@ export function createCLI(name: string, version: string): CLI {
  * @returns Promise<void>
  */
 export function run(): Promise<void> {
-  const cli = createCLI("aeron", "0.1.0");
+  const cli = createCLI("ventostack", "0.1.0");
 
   // Commands are registered by the consuming app
   // This is the default entry point

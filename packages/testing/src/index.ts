@@ -1,7 +1,7 @@
 /**
- * @aeron/testing - 测试工具包
+ * @ventostack/testing - 测试工具包
  *
- * 提供 Aeron 框架的测试基础设施，包括：
+ * 提供 VentoStack 框架的测试基础设施，包括：
  * - HTTP 测试客户端（createTestClient）
  * - 测试应用生命周期管理（createTestApp）
  * - 数据库事务隔离与自动回滚（createDBIsolation / withTransaction）

@@ -1,5 +1,5 @@
 /**
- * @aeron/auth - 基于角色的访问控制（RBAC）
+ * @ventostack/auth - 基于角色的访问控制（RBAC）
  * 默认 deny，必须显式授权；基于内存 Map 存储角色与权限关系
  */
 

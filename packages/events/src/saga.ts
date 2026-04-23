@@ -1,5 +1,5 @@
 /**
- * @aeron/events - 分布式事务（Saga 编排）
+ * @ventostack/events - 分布式事务（Saga 编排）
  * 提供 Saga 与 TCC 两种分布式事务模式，支持正向执行、失败补偿与状态追踪
  * Saga 按顺序执行步骤，失败时逆序补偿；TCC 采用 Try-Confirm-Cancel 三阶段提交
  */

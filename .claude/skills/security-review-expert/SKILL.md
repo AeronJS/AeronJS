@@ -1,6 +1,6 @@
 ---
 name: security-review-expert
-description: Use when reviewing Aeron backend code, configs, manifests, or architecture work after implementation for web attack surface, trust boundary violations, tenant isolation leaks, secret exposure, AI tool abuse, and runtime or container hardening gaps.
+description: Use when reviewing VentoStack backend code, configs, manifests, or architecture work after implementation for web attack surface, trust boundary violations, tenant isolation leaks, secret exposure, AI tool abuse, and runtime or container hardening gaps.
 ---
 
 # Security Review Expert

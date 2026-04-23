@@ -1,12 +1,12 @@
 ---
 title: 项目结构
-description: Aeron 推荐的项目结构和文件组织方式
+description: VentoStack 推荐的项目结构和文件组织方式
 ---
 
 ## 推荐结构
 
 ```
-my-aeron-app/
+my-ventostack-app/
   src/
     main.ts              - 应用入口
     routes/              - 路由模块
@@ -32,8 +32,8 @@ my-aeron-app/
 `src/main.ts` 负责组装所有模块：
 
 ```typescript
-import { createApp } from "@aeron/core";
-import { createLogger } from "@aeron/observability";
+import { createApp } from "@ventostack/core";
+import { createLogger } from "@ventostack/observability";
 import { usersRouter } from "./routes/users";
 import { authRouter } from "./routes/auth";
 import { loggerMiddleware } from "./middleware/logger";
@@ -61,9 +61,9 @@ await app.listen();
 
 ```typescript
 // src/routes/users.ts
-import { createRouter } from "@aeron/core";
-import { defineModel, column } from "@aeron/database";
-import type { Database } from "@aeron/database";
+import { createRouter } from "@ventostack/core";
+import { defineModel, column } from "@ventostack/database";
+import type { Database } from "@ventostack/database";
 
 const UserModel = defineModel("users", {
   id: column.bigint({ primary: true, autoIncrement: true }),
@@ -99,7 +99,7 @@ export function usersRouter(db: Database) {
 
 ```typescript
 // src/config.ts
-import { createConfig } from "@aeron/core";
+import { createConfig } from "@ventostack/core";
 
 export const config = createConfig({
   port: { type: "number", env: "PORT", default: 3000 },

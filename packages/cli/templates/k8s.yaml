@@ -1,23 +1,23 @@
-# Aeron — Kubernetes 部署 Manifests
+# VentoStack — Kubernetes 部署 Manifests
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: aeron-app
+  name: ventostack-app
   labels:
-    app: aeron-app
+    app: ventostack-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: aeron-app
+      app: ventostack-app
   template:
     metadata:
       labels:
-        app: aeron-app
+        app: ventostack-app
     spec:
-      serviceAccountName: aeron-app
+      serviceAccountName: ventostack-app
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -26,7 +26,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: app
-          image: aeron-app:latest
+          image: ventostack-app:latest
           ports:
             - containerPort: 3000
               protocol: TCP
@@ -37,9 +37,9 @@ spec:
               value: "3000"
           envFrom:
             - configMapRef:
-                name: aeron-config
+                name: ventostack-config
             - secretRef:
-                name: aeron-secrets
+                name: ventostack-secrets
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -83,10 +83,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: aeron-app
+  name: ventostack-app
 spec:
   selector:
-    app: aeron-app
+    app: ventostack-app
   ports:
     - port: 80
       targetPort: 3000
@@ -97,14 +97,14 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: aeron-app
+  name: ventostack-app
 automountServiceAccountToken: false
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aeron-config
+  name: ventostack-config
 data:
   LOG_LEVEL: "info"
   LOG_FORMAT: "json"
@@ -113,11 +113,11 @@ data:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: aeron-app-netpol
+  name: ventostack-app-netpol
 spec:
   podSelector:
     matchLabels:
-      app: aeron-app
+      app: ventostack-app
   policyTypes:
     - Ingress
     - Egress

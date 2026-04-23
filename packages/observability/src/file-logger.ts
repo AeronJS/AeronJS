@@ -1,5 +1,5 @@
 /**
- * @aeron/observability — File Logger with Rotation
+ * @ventostack/observability — File Logger with Rotation
  * 提供基于文件的结构化日志输出，支持按大小自动轮转与历史文件保留策略
  * 内部复用 createLogger 实现，继承其级别过滤与脱敏能力
  */

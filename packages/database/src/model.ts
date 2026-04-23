@@ -1,5 +1,5 @@
 /**
- * @aeron/database — 模型定义
+ * @ventostack/database — 模型定义
  * 提供无 class 的列类型工厂、模型定义函数与类型推导工具
  * 所有列类型均携带编译期类型信息，支持 nullable、default、primary 等约束
  */

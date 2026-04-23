@@ -1,4 +1,4 @@
-// @aeron/core - Schema 验证器
+// @ventostack/core - Schema 验证器
 
 import type { Context } from "./context";
 import type { Middleware } from "./middleware";

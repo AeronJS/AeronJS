@@ -1,6 +1,6 @@
-// @aeron/core - 插件系统
+// @ventostack/core - 插件系统
 
-import type { AeronApp } from "./app";
+import type { VentoStackApp } from "./app";
 
 /** 插件接口 */
 export interface Plugin {
@@ -8,7 +8,7 @@ export interface Plugin {
   name: string;
   /**
    * 安装插件到应用
-   * @param app - Aeron 应用实例
+   * @param app - VentoStack 应用实例
    */
-  install(app: AeronApp): void | Promise<void>;
+  install(app: VentoStackApp): void | Promise<void>;
 }

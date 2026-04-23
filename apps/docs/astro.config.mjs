@@ -4,7 +4,7 @@ import { defineConfig } from 'astro/config'
 export default defineConfig({
   integrations: [
     starlight({
-      title: 'Aeron Framework',
+      title: 'VentoStack Framework',
       description: 'Bun 原生全栈后端框架文档',
       defaultLocale: 'root',
       locales: {
@@ -14,7 +14,10 @@ export default defineConfig({
         }
       },
       social: {
-        github: 'https://github.com/your-org/aeron'
+        github: 'https://github.com/Ventorium/VentoStack'
+      },
+      editLink: {
+        baseUrl: 'https://github.com/Ventorium/VentoStack/edit/main/apps/docs/'
       },
       sidebar: [
         {

@@ -1,5 +1,5 @@
 /**
- * @aeron/testing - Fixture 管理
+ * @ventostack/testing - Fixture 管理
  * 提供基于内存 Map 的 Fixture 注册、获取、JSON 文件加载与重置能力
  */
 

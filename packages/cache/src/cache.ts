@@ -1,5 +1,5 @@
 /**
- * @aeron/cache - 统一缓存接口
+ * @ventostack/cache - 统一缓存接口
  * 提供基于 CacheAdapter 的高层缓存能力，包括标签、remember、singleflight 等特性
  * 所有值内部序列化为 JSON，支持 TTL 过期与按标签批量清除
  */

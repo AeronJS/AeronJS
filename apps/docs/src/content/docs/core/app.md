@@ -1,14 +1,14 @@
 ---
 title: 应用创建
-description: 使用 createApp 创建 Aeron HTTP 应用
+description: 使用 createApp 创建 VentoStack HTTP 应用
 ---
 
-`createApp` 是 Aeron 应用的入口点，基于 `Bun.serve()` 构建高性能 HTTP 服务器。
+`createApp` 是 VentoStack 应用的入口点，基于 `Bun.serve()` 构建高性能 HTTP 服务器。
 
 ## 基本用法
 
 ```typescript
-import { createApp } from "@aeron/core";
+import { createApp } from "@ventostack/core";
 
 const app = createApp({ port: 3000 });
 await app.listen();
@@ -29,7 +29,7 @@ interface AppConfig {
 使用 `app.use()` 注册中间件，按注册顺序执行：
 
 ```typescript
-import { createApp, createRouter, requestLogger, errorHandler } from "@aeron/core";
+import { createApp, createRouter, requestLogger, errorHandler } from "@ventostack/core";
 
 const app = createApp({ port: 3000 });
 
@@ -66,7 +66,7 @@ await app.listen();
 
 ## 优雅停机
 
-Aeron 会自动处理 `SIGINT` 和 `SIGTERM` 信号，在关闭前触发 `onStop` 回调：
+VentoStack 会自动处理 `SIGINT` 和 `SIGTERM` 信号，在关闭前触发 `onStop` 回调：
 
 ```typescript
 const app = createApp({ port: 3000 });
@@ -81,11 +81,11 @@ app.lifecycle.onBeforeStop(async () => {
 await app.listen();
 ```
 
-## AeronApp 接口
+## VentoStackApp 接口
 
 ```typescript
-interface AeronApp {
-  use(item: Middleware | Router | Plugin): AeronApp;
+interface VentoStackApp {
+  use(item: Middleware | Router | Plugin): VentoStackApp;
   listen(port?: number): Promise<void>;
   close(): Promise<void>;
   readonly router: Router;

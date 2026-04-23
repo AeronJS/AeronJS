@@ -1,4 +1,4 @@
-// @aeron/core - 熔断器
+// @ventostack/core - 熔断器
 
 /** 熔断器状态 */
 export type CircuitState = "closed" | "open" | "half-open";

@@ -3,7 +3,7 @@ title: LLM 适配器
 description: 使用 createLLMAdapter 集成大语言模型
 ---
 
-`@aeron/ai` 提供了统一的 LLM 适配器接口，支持 OpenAI、Anthropic 等主流 AI 服务，无需修改业务代码即可切换提供商。
+`@ventostack/ai` 提供了统一的 LLM 适配器接口，支持 OpenAI、Anthropic 等主流 AI 服务，无需修改业务代码即可切换提供商。
 
 ## 支持的提供商
 
@@ -15,7 +15,7 @@ description: 使用 createLLMAdapter 集成大语言模型
 ## 基本用法
 
 ```typescript
-import { createLLMAdapter } from "@aeron/ai";
+import { createLLMAdapter } from "@ventostack/ai";
 
 const llm = createLLMAdapter({
   provider: "openai",

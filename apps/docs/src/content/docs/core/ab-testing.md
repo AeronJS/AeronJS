@@ -8,8 +8,8 @@ description: 使用 createABTestManager 进行功能灰度发布和 A/B 测试
 ## 基本用法
 
 ```typescript
-import { createABTestManager } from "@aeron/core";
-import type { ABTest } from "@aeron/core";
+import { createABTestManager } from "@ventostack/core";
+import type { ABTest } from "@ventostack/core";
 
 const ab = createABTestManager();
 

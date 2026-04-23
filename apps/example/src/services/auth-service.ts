@@ -1,5 +1,5 @@
-import { createJWT, type JWTPayload } from "@aeron/auth";
-import { UnauthorizedError } from "@aeron/core";
+import { createJWT, type JWTPayload } from "@ventostack/auth";
+import { UnauthorizedError } from "@ventostack/core";
 import type { User } from "../models";
 import type { createUserService } from "./user-service";
 

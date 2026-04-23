@@ -1,7 +1,7 @@
 /**
- * @aeron/cache - 缓存模块统一导出
+ * @ventostack/cache - 缓存模块统一导出
  *
- * 提供 Aeron 框架的缓存基础设施，包括：
+ * 提供 VentoStack 框架的缓存基础设施，包括：
  * - 统一缓存接口与工厂（createCache）
  * - 内存缓存适配器（createMemoryAdapter）
  * - 分布式锁（createLock）

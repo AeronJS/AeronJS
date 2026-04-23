@@ -1,4 +1,4 @@
-import type { Migration } from "@aeron/database";
+import type { Migration } from "@ventostack/database";
 
 export const migration001: Migration = {
   name: "001_create_users",

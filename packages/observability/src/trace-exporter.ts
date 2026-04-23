@@ -1,5 +1,5 @@
 /**
- * @aeron/observability - Trace 导出（Jaeger / Zipkin / Tempo）
+ * @ventostack/observability - Trace 导出（Jaeger / Zipkin / Tempo）
  * 支持 Zipkin、OTLP、Jaeger、Tempo 四种后端格式，自动批量导出与定时刷新
  * 适用于将链路追踪数据上报到各类 APM 系统的场景
  */
@@ -113,7 +113,7 @@ export function createTraceExporter(
               },
               scopeSpans: [
                 {
-                  scope: { name: "aeron" },
+                  scope: { name: "ventostack" },
                   spans: spans.map(toOTLPSpan),
                 },
               ],

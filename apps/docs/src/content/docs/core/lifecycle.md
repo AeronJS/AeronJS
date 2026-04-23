@@ -8,7 +8,7 @@ description: 使用 createLifecycle 管理应用生命周期钩子
 ## 基本用法
 
 ```typescript
-import { createLifecycle } from "@aeron/core";
+import { createLifecycle } from "@ventostack/core";
 
 const lifecycle = createLifecycle();
 
@@ -34,7 +34,7 @@ await lifecycle.stop();
 `createApp` 内部使用 lifecycle，但你也可以手动使用：
 
 ```typescript
-import { createApp, createLifecycle } from "@aeron/core";
+import { createApp, createLifecycle } from "@ventostack/core";
 
 const lifecycle = createLifecycle();
 const app = createApp({ port: 3000 });

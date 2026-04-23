@@ -1,4 +1,4 @@
-// @aeron/core - 连接池释放与资源管理
+// @ventostack/core - 连接池释放与资源管理
 
 /** 可释放资源接口 */
 export interface Disposable {

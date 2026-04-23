@@ -34,12 +34,12 @@ describe("createGrafanaDashboard", () => {
   test("custom tags and refresh", () => {
     const dashboard = createGrafanaDashboard({
       title: "Test",
-      tags: ["aeron", "test"],
+      tags: ["ventostack", "test"],
       refresh: "10s",
       panels: [],
     });
     const db = dashboard.generate().dashboard as Record<string, unknown>;
-    expect(db.tags).toEqual(["aeron", "test"]);
+    expect(db.tags).toEqual(["ventostack", "test"]);
     expect(db.refresh).toBe("10s");
   });
 

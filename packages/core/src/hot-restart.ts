@@ -1,4 +1,4 @@
-// @aeron/core - 热重启（不中断连接升级进程）
+// @ventostack/core - 热重启（不中断连接升级进程）
 
 /** 热重启配置选项 */
 export interface HotRestartOptions {

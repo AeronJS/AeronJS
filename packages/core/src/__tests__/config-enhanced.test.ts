@@ -9,7 +9,7 @@ describe("loadConfig", () => {
   let tmpDir: string;
 
   beforeAll(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "aeron-config-"));
+    tmpDir = mkdtempSync(join(tmpdir(), "ventostack-config-"));
   });
 
   afterAll(() => {

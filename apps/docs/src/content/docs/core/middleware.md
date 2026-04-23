@@ -1,9 +1,9 @@
 ---
 title: 中间件
-description: Aeron 中间件机制，使用洋葱模型组合请求处理管道
+description: VentoStack 中间件机制，使用洋葱模型组合请求处理管道
 ---
 
-Aeron 中间件遵循洋葱模型（Onion Model），与 Koa 类似。每个中间件可以在请求前后执行逻辑。
+VentoStack 中间件遵循洋葱模型（Onion Model），与 Koa 类似。每个中间件可以在请求前后执行逻辑。
 
 ## 中间件签名
 
@@ -17,7 +17,7 @@ type Middleware = (ctx: Context, next: NextFunction) => Promise<Response>;
 ## 基本用法
 
 ```typescript
-import { createApp, requestLogger, errorHandler } from "@aeron/core";
+import { createApp, requestLogger, errorHandler } from "@ventostack/core";
 
 const app = createApp({ port: 3000 });
 
@@ -91,12 +91,12 @@ const authMiddleware: Middleware = async (ctx, next) => {
 开箱即用的请求日志中间件，默认输出结构化 JSON：
 
 ```typescript
-import { requestLogger } from "@aeron/core";
+import { requestLogger } from "@ventostack/core";
 
 // 默认使用 console 输出 JSON
 app.use(requestLogger());
 
-// 传入自定义 logger（兼容 @aeron/observability 的 Logger）
+// 传入自定义 logger（兼容 @ventostack/observability 的 Logger）
 app.use(requestLogger({ logger }));
 
 // 静默模式（测试环境禁用日志）
@@ -105,10 +105,10 @@ app.use(requestLogger({ silent: true }));
 
 ### errorHandler — 全局错误处理
 
-统一捕获未处理异常，AeronError 返回结构化响应，其他错误返回 500 且不暴露内部细节：
+统一捕获未处理异常，VentoStackError 返回结构化响应，其他错误返回 500 且不暴露内部细节：
 
 ```typescript
-import { errorHandler } from "@aeron/core";
+import { errorHandler } from "@ventostack/core";
 
 // 建议作为第一个中间件注册，捕获所有后续错误
 app.use(errorHandler());
@@ -122,7 +122,7 @@ app.use(errorHandler({ logger }));
 ### CORS 中间件
 
 ```typescript
-import { cors } from "@aeron/core";
+import { cors } from "@ventostack/core";
 
 app.use(cors({ origin: "https://example.com" }));
 ```
@@ -130,7 +130,7 @@ app.use(cors({ origin: "https://example.com" }));
 ### 请求 ID 中间件
 
 ```typescript
-import { requestId } from "@aeron/core";
+import { requestId } from "@ventostack/core";
 
 app.use(requestId("X-Request-Id"));
 ```

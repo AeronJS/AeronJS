@@ -1,4 +1,4 @@
-// @aeron/core - 自定义 Hook 系统
+// @ventostack/core - 自定义 Hook 系统
 
 /** Hook 回调函数 */
 export type HookCallback<T = unknown> = (data: T) => void | Promise<void>;

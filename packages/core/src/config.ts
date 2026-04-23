@@ -1,4 +1,4 @@
-// @aeron/core - 配置系统
+// @ventostack/core - 配置系统
 
 /** 配置字段定义 */
 export interface ConfigFieldDef {

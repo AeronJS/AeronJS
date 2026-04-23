@@ -3,12 +3,12 @@ title: 插件系统
 description: 使用 createPluginRegistry 和 createPluginSandbox 构建可扩展的插件系统
 ---
 
-Aeron 提供了完整的插件系统，支持插件注册、依赖管理和沙箱隔离执行。
+VentoStack 提供了完整的插件系统，支持插件注册、依赖管理和沙箱隔离执行。
 
 ## 插件注册
 
 ```typescript
-import { createPluginRegistry } from "@aeron/core";
+import { createPluginRegistry } from "@ventostack/core";
 
 const registry = createPluginRegistry();
 
@@ -58,7 +58,7 @@ await registry.init();
 `createPluginSandbox` 提供隔离的执行环境，防止插件访问未授权资源：
 
 ```typescript
-import { createPluginSandbox } from "@aeron/core";
+import { createPluginSandbox } from "@ventostack/core";
 
 const sandbox = createPluginSandbox({
   allowedModules: ["node:path", "node:os"],  // 允许访问的模块

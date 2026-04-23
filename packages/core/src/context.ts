@@ -1,4 +1,4 @@
-// @aeron/core - 请求上下文
+// @ventostack/core - 请求上下文
 
 /** 带类型的 Response（phantom type，仅用于编译期推导） */
 export type TypedResponse<T = unknown> = Response & { __data?: T };
@@ -8,7 +8,7 @@ export type TypedResponse<T = unknown> = Response & { __data?: T };
  *
  * @example
  * ```typescript
- * declare module "@aeron/core" {
+ * declare module "@ventostack/core" {
  *   interface ContextState {
  *     user?: { id: string; name: string };
  *     tenant?: string;

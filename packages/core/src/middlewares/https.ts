@@ -1,4 +1,4 @@
-// @aeron/core - HTTPS 强制与 HSTS 中间件
+// @ventostack/core - HTTPS 强制与 HSTS 中间件
 
 import type { Middleware } from "../middleware";
 

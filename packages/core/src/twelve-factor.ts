@@ -1,4 +1,4 @@
-// @aeron/core - 12-Factor 配置驱动
+// @ventostack/core - 12-Factor 配置驱动
 
 /** 12-Factor 配置结构 */
 export interface TwelveFactorConfig {
@@ -61,7 +61,7 @@ export function loadTwelveFactorConfig(
   }
 
   const config: TwelveFactorConfig = {
-    appName: e.APP_NAME ?? "aeron-app",
+    appName: e.APP_NAME ?? "ventostack-app",
     port: Number.isNaN(port) ? 3000 : port,
     env: appEnv,
     logLevel: e.LOG_LEVEL ?? "info",

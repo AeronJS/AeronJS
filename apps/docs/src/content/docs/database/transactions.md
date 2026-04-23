@@ -8,7 +8,7 @@ description: 使用 createTransactionManager 处理数据库事务
 ## 基本用法
 
 ```typescript
-import { createTransactionManager } from "@aeron/database";
+import { createTransactionManager } from "@ventostack/database";
 
 const db = createQueryBuilder({ url: process.env.DATABASE_URL! });
 const txm = createTransactionManager(db);

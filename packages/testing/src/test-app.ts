@@ -1,14 +1,14 @@
 /**
- * @aeron/testing - 测试应用工具
- * 提供 Aeron 应用实例的测试启动、随机端口分配与生命周期管理能力
+ * @ventostack/testing - 测试应用工具
+ * 提供 VentoStack 应用实例的测试启动、随机端口分配与生命周期管理能力
  */
 
-import type { AeronApp } from "@aeron/core";
+import type { VentoStackApp } from "@ventostack/core";
 
 /** 测试应用实例接口 */
 export interface TestAppInstance {
-  /** Aeron 应用实例 */
-  readonly app: AeronApp;
+  /** VentoStack 应用实例 */
+  readonly app: VentoStackApp;
   /** 监听端口 */
   readonly port: number;
   /** 基础访问 URL */
@@ -39,10 +39,10 @@ async function findFreePort(): Promise<number> {
 /**
  * 创建测试应用实例
  * 自动分配随机端口并启动应用，提供基础 URL 与关闭能力
- * @param app Aeron 应用实例
+ * @param app VentoStack 应用实例
  * @returns 测试应用实例
  */
-export async function createTestApp(app: AeronApp): Promise<TestAppInstance> {
+export async function createTestApp(app: VentoStackApp): Promise<TestAppInstance> {
   const port = await findFreePort();
   await app.listen(port);
 

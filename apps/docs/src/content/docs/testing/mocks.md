@@ -3,14 +3,14 @@ title: Mock 工具
 description: 使用 createMockRequest 和其他测试辅助工具
 ---
 
-`@aeron/testing` 提供了丰富的 Mock 和测试辅助工具。
+`@ventostack/testing` 提供了丰富的 Mock 和测试辅助工具。
 
 ## createMockRequest
 
 创建模拟的 HTTP 请求：
 
 ```typescript
-import { createMockRequest } from "@aeron/testing";
+import { createMockRequest } from "@ventostack/testing";
 
 const ctx = createMockRequest({
   method: "POST",
@@ -39,7 +39,7 @@ expect(res.status).toBe(200);
 等待异步条件满足：
 
 ```typescript
-import { waitFor } from "@aeron/testing";
+import { waitFor } from "@ventostack/testing";
 
 test("event is processed", async () => {
   let processed = false;
@@ -60,7 +60,7 @@ test("event is processed", async () => {
 类型安全的 JSON 响应断言：
 
 ```typescript
-import { expectJSON } from "@aeron/testing";
+import { expectJSON } from "@ventostack/testing";
 
 test("returns user", async () => {
   const res = await app.request("GET", "/users/1");
@@ -74,7 +74,7 @@ test("returns user", async () => {
 ## Mock 缓存
 
 ```typescript
-import { createMockCache } from "@aeron/testing";
+import { createMockCache } from "@ventostack/testing";
 
 const cache = createMockCache();
 
@@ -89,7 +89,7 @@ expect(cache.set).toHaveBeenCalledWith("user:1", expect.any(Object));
 ## Mock 数据库
 
 ```typescript
-import { createMockDatabase } from "@aeron/testing";
+import { createMockDatabase } from "@ventostack/testing";
 
 const db = createMockDatabase();
 

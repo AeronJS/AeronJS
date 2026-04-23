@@ -8,8 +8,8 @@ description: 使用 createMigrator 管理数据库 schema 版本
 ## 定义迁移
 
 ```typescript
-import { createMigrator } from "@aeron/database";
-import type { Migration } from "@aeron/database";
+import { createMigrator } from "@ventostack/database";
+import type { Migration } from "@ventostack/database";
 
 const migrations: Migration[] = [
   {

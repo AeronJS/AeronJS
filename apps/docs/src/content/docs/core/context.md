@@ -129,9 +129,9 @@ router.get("/stream", async (ctx) => {
 
 ```typescript
 // types/context.d.ts
-import "@aeron/core";
+import "@ventostack/core";
 
-declare module "@aeron/core" {
+declare module "@ventostack/core" {
   interface ContextState {
     user?: { id: string; name: string };
     tenant?: string;

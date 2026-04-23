@@ -1,28 +1,28 @@
 ---
 title: 错误处理
-description: Aeron 内置错误类型和错误处理机制
+description: VentoStack 内置错误类型和错误处理机制
 ---
 
-Aeron 提供了一套完整的错误类型层级，方便在路由和中间件中抛出语义明确的错误。
+VentoStack 提供了一套完整的错误类型层级，方便在路由和中间件中抛出语义明确的错误。
 
 ## 内置错误类型
 
 ```typescript
 import {
-  AeronError,       // 基类
+  VentoStackError,       // 基类
   ClientError,      // 4xx 错误基类
   ServerError,      // 5xx 错误基类
   NotFoundError,    // 404
   ValidationError,  // 422（通常）
   UnauthorizedError, // 401
   ForbiddenError,   // 403
-} from "@aeron/core";
+} from "@ventostack/core";
 ```
 
 ### 错误层级
 
 ```
-AeronError
+VentoStackError
 ├── ClientError (4xx)
 │   ├── NotFoundError (404)
 │   ├── ValidationError (422)
@@ -34,7 +34,7 @@ AeronError
 ## 抛出错误
 
 ```typescript
-import { NotFoundError, ValidationError, UnauthorizedError } from "@aeron/core";
+import { NotFoundError, ValidationError, UnauthorizedError } from "@ventostack/core";
 
 router.get("/users/:id<int>", async (ctx) => {
   const user = await db.query(UserModel).where("id", "=", ctx.params.id).get();
@@ -63,14 +63,14 @@ router.post("/users", async (ctx) => {
 建议在应用入口注册全局错误处理中间件：
 
 ```typescript
-import { AeronError, ClientError, ServerError } from "@aeron/core";
-import type { Middleware } from "@aeron/core";
+import { VentoStackError, ClientError, ServerError } from "@ventostack/core";
+import type { Middleware } from "@ventostack/core";
 
 const errorHandler: Middleware = async (ctx, next) => {
   try {
     await next();
   } catch (err) {
-    if (err instanceof AeronError) {
+    if (err instanceof VentoStackError) {
       return ctx.json(
         {
           error: err.message,
@@ -94,7 +94,7 @@ app.use(errorHandler); // 第一个注册，捕获所有后续错误
 ## 自定义错误类型
 
 ```typescript
-import { ClientError } from "@aeron/core";
+import { ClientError } from "@ventostack/core";
 
 class PaymentRequiredError extends ClientError {
   constructor(message: string) {
@@ -124,8 +124,8 @@ router.post("/checkout", async (ctx) => {
 ## 错误类构造参数
 
 ```typescript
-// AeronError 基类
-new AeronError(message: string, statusCode: number, code?: string)
+// VentoStackError 基类
+new VentoStackError(message: string, statusCode: number, code?: string)
 
 // 预定义错误
 new NotFoundError(message?: string)        // 404, "NOT_FOUND"

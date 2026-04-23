@@ -3,14 +3,14 @@ title: 配置管理
 description: 使用 createConfig 和 loadConfig 管理应用配置，支持环境变量、YAML 文件和 12-Factor 规范
 ---
 
-Aeron 提供了多种配置管理方式，从简单的环境变量读取到完整的 12-Factor 配置系统。
+VentoStack 提供了多种配置管理方式，从简单的环境变量读取到完整的 12-Factor 配置系统。
 
 ## 基本配置
 
 使用 `createConfig` 定义 schema 并读取配置：
 
 ```typescript
-import { createConfig } from "@aeron/core";
+import { createConfig } from "@ventostack/core";
 
 const config = createConfig({
   port: { type: "number", env: "PORT", default: 3000 },
@@ -44,7 +44,7 @@ type ConfigFieldDef = {
 `loadConfig` 支持从 JSON 文件加载配置，并按环境合并：
 
 ```typescript
-import { loadConfig } from "@aeron/core";
+import { loadConfig } from "@ventostack/core";
 
 // 读取 config/base.json 和 config/${NODE_ENV}.json
 const config = await loadConfig(
@@ -72,7 +72,7 @@ config/
 使用 `loadYAMLConfig` 加载 YAML 格式的配置：
 
 ```typescript
-import { loadYAMLConfig, parseYAML } from "@aeron/core";
+import { loadYAMLConfig, parseYAML } from "@ventostack/core";
 
 // 从文件加载
 const config = await loadYAMLConfig("./config/app.yaml");
@@ -94,7 +94,7 @@ database:
 使用 `createConfigWatcher` 实现配置动态更新：
 
 ```typescript
-import { createConfigWatcher } from "@aeron/core";
+import { createConfigWatcher } from "@ventostack/core";
 
 const watcher = createConfigWatcher({
   interval: 5000, // 每 5 秒检查一次
@@ -122,7 +122,7 @@ watcher.stop();
 对敏感配置值进行加密存储：
 
 ```typescript
-import { createConfigEncryptor } from "@aeron/core";
+import { createConfigEncryptor } from "@ventostack/core";
 
 const encryptor = createConfigEncryptor({
   key: process.env.ENCRYPTION_KEY!, // 至少 32 字节
@@ -146,7 +146,7 @@ encryptor.isEncrypted("plain");   // false
 遵循 [12-Factor App](https://12factor.net/config) 规范，从环境变量加载配置：
 
 ```typescript
-import { loadTwelveFactorConfig, validateEnvVars } from "@aeron/core";
+import { loadTwelveFactorConfig, validateEnvVars } from "@ventostack/core";
 
 // 验证必要的环境变量
 const { valid, missing } = validateEnvVars(["DATABASE_URL", "JWT_SECRET"]);
@@ -170,7 +170,7 @@ if (warnings.length > 0) {
 使用 `parseArgs` 解析命令行参数：
 
 ```typescript
-import { parseArgs } from "@aeron/core";
+import { parseArgs } from "@ventostack/core";
 
 // bun run src/main.ts --port 8080 --env production
 const args = parseArgs(process.argv.slice(2));
@@ -183,7 +183,7 @@ const args = parseArgs(process.argv.slice(2));
 使用 `securityPrecheck` 在启动时检查安全配置：
 
 ```typescript
-import { securityPrecheck } from "@aeron/core";
+import { securityPrecheck } from "@ventostack/core";
 
 const result = securityPrecheck({
   requireHttps: true,          // 生产环境必须 HTTPS
@@ -202,7 +202,7 @@ if (!result.passed) {
 使用 `sanitizeConfig` 对配置进行脱敏处理（用于日志输出）：
 
 ```typescript
-import { sanitizeConfig } from "@aeron/core";
+import { sanitizeConfig } from "@ventostack/core";
 
 const schema = {
   port: { type: "number" },

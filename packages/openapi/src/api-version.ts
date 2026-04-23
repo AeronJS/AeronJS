@@ -1,11 +1,11 @@
 /**
- * @aeron/openapi — API 版本管理（Header 版本）
+ * @ventostack/openapi — API 版本管理（Header 版本）
  *
  * 提供基于 Accept header 或 X-API-Version header 的 API 版本解析与中间件。
  * 支持版本兼容性检查、废弃版本标记和默认版本回退。
  */
 
-import type { Middleware } from "@aeron/core";
+import type { Middleware } from "@ventostack/core";
 
 /** API 版本中间件选项 */
 export interface APIVersionOptions {

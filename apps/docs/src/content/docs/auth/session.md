@@ -8,8 +8,8 @@ description: 使用 createSessionManager 管理有状态的用户会话
 ## 基本用法
 
 ```typescript
-import { createSessionManager } from "@aeron/auth";
-import { createRedisAdapter } from "@aeron/cache";
+import { createSessionManager } from "@ventostack/auth";
+import { createRedisAdapter } from "@ventostack/cache";
 
 const session = createSessionManager({
   adapter: createRedisAdapter({ url: process.env.REDIS_URL! }),

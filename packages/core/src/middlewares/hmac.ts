@@ -1,4 +1,4 @@
-// @aeron/core - HMAC 请求签名中间件
+// @ventostack/core - HMAC 请求签名中间件
 
 import { timingSafeEqual } from "node:crypto";
 import type { Context } from "../context";

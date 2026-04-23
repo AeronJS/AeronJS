@@ -1,5 +1,5 @@
 /**
- * @aeron/cache - 分布式一致性（防 cache stampede）
+ * @ventostack/cache - 分布式一致性（防 cache stampede）
  * 提供互斥锁与 XFetch 概率性提前刷新算法，防止高并发下缓存失效导致大量请求穿透到数据库
  */
 

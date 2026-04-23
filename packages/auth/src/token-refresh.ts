@@ -1,5 +1,5 @@
 /**
- * @aeron/auth - JWT Token Refresh & Revocation
+ * @ventostack/auth - JWT Token Refresh & Revocation
  * Access Token 与 Refresh Token 分离，不共用密钥与生命周期
  * 实现 Token 轮换机制：刷新时旧的 Refresh Token 被吊销，生成全新 Token 对
  */

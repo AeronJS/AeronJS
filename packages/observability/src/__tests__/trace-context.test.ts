@@ -50,7 +50,7 @@ describe("W3C TraceContext Propagator", () => {
   test("injects tracestate header", () => {
     const headers = new Headers();
     propagator.inject({ traceId: "abc", spanId: "def" }, headers);
-    expect(headers.get("tracestate")).toContain("aeron=def");
+    expect(headers.get("tracestate")).toContain("ventostack=def");
   });
 
   test("preserves existing tracestate", () => {

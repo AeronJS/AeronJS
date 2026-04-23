@@ -8,7 +8,7 @@ description: 使用 createConnectionPool 管理数据库连接
 ## 基本用法
 
 ```typescript
-import { createConnectionPool } from "@aeron/database";
+import { createConnectionPool } from "@ventostack/database";
 
 const pool = createConnectionPool({
   url: process.env.DATABASE_URL!,
