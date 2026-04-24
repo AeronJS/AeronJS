@@ -1,99 +1,191 @@
 ---
 title: 限流
-description: 使用 createRateLimiter 保护应用免受暴力攻击和过载
+description: 使用 rateLimit 中间件保护应用免受暴力攻击和过载
 ---
 
-`createRateLimiter` 提供了基于令牌桶算法的限流功能，支持按 IP、用户 ID 或自定义键进行限流。
+`rateLimit` 是一个中间件工厂函数，基于固定窗口计数器算法实现，支持按 IP、用户 ID 或自定义键进行限流。
 
 ## 基本用法
 
 ```typescript
-import { createRateLimiter } from "@ventostack/core";
+import { rateLimit, createMemoryRateLimitStore } from "@ventostack/core";
 
-const limiter = createRateLimiter({
-  windowMs: 60_000,  // 时间窗口：1 分钟
-  max: 100,          // 最大请求数
-});
-
-// 作为中间件使用
-const rateLimitMiddleware: Middleware = async (ctx, next) => {
-  const key = ctx.headers.get("x-forwarded-for") ?? ctx.request.headers.get("cf-connecting-ip") ?? "unknown";
-  const result = limiter.check(key);
-
-  ctx.responseHeaders.set("X-RateLimit-Limit", String(result.limit));
-  ctx.responseHeaders.set("X-RateLimit-Remaining", String(result.remaining));
-  ctx.responseHeaders.set("X-RateLimit-Reset", String(result.reset));
-
-  if (!result.allowed) {
-    ctx.responseHeaders.set("Retry-After", String(Math.ceil(result.retryAfter! / 1000)));
-    return ctx.json({ error: "Too Many Requests" }, 429);
-  }
-
-  await next();
-};
-
-app.use(rateLimitMiddleware);
+app.use(
+  rateLimit({
+    windowMs: 60_000,  // 时间窗口：1 分钟
+    max: 100,          // 窗口内最大请求数
+    message: "Too many requests",
+    store: createMemoryRateLimitStore(),
+  }),
+);
 ```
 
-## 按路由配置
+限流中间件会在响应头中自动注入以下信息：
 
-不同路由可以设置不同的限流规则：
+- `X-RateLimit-Limit` — 窗口内最大请求数
+- `X-RateLimit-Remaining` — 剩余可用请求数
+- `X-RateLimit-Reset` — 窗口重置时间戳（毫秒）
+
+当请求超过限制时，返回 `429 Too Many Requests` 响应，并附带 `Retry-After` 头：
+
+```json
+{
+  "error": "Too Many Requests"
+}
+```
+
+## 配置选项
 
 ```typescript
-// API 全局限流
-const apiLimiter = createRateLimiter({ windowMs: 60_000, max: 1000 });
+interface RateLimitOptions {
+  /** 时间窗口（毫秒），默认 60000 */
+  windowMs?: number;
+  /** 窗口内最大请求数，默认 100 */
+  max?: number;
+  /** 触发限流时的响应消息，默认 "Too Many Requests" */
+  message?: string;
+  /**
+   * 是否信任代理头（X-Forwarded-For / X-Real-IP）。
+   * 默认 false，避免客户端伪造 IP 绕过限流。
+   */
+  trustProxyHeaders?: boolean;
+  /** 自定义限流键生成函数 */
+  keyFn?: (ctx: Context) => string;
+  /** 自定义存储后端，默认内存存储 */
+  store?: RateLimitStore;
+}
+```
 
-// 登录接口严格限流
-const loginLimiter = createRateLimiter({ windowMs: 900_000, max: 5 }); // 15分钟内5次
+## 按路由配置不同限流规则
 
-// 搜索接口限流
-const searchLimiter = createRateLimiter({ windowMs: 60_000, max: 30 });
+不同路由可以通过 `router.group` 或路由级中间件注册不同的限流规则：
 
-router.post("/auth/login", applyRateLimit(loginLimiter), async (ctx) => {
-  // 登录处理
-});
+```typescript
+// 登录接口严格限流（路由级中间件）
+router.post(
+  "/auth/login",
+  async (ctx) => {
+    /* 登录逻辑 */
+  },
+  rateLimit({
+    windowMs: 15 * 60_000,
+    max: 5,
+    message: "登录次数过多，请稍后再试",
+    store: createMemoryRateLimitStore(),
+  }),
+);
 
-router.get("/search", applyRateLimit(searchLimiter), async (ctx) => {
-  // 搜索处理
-});
+// 搜索接口单独限流（路由级中间件）
+router.get(
+  "/search",
+  async (ctx) => {
+    /* 搜索逻辑 */
+  },
+  rateLimit({
+    windowMs: 60_000,
+    max: 30,
+    store: createMemoryRateLimitStore(),
+  }),
+);
+
+// 或者使用分组中间件
+router.group(
+  "/api",
+  (api) => {
+    api.post("/auth/login", loginHandler);
+    api.get("/search", searchHandler);
+  },
+  rateLimit({
+    windowMs: 60_000,
+    max: 100,
+    store: createMemoryRateLimitStore(),
+  }),
+);
 ```
 
 ## 按用户 ID 限流
 
-```typescript
-const userLimiter = createRateLimiter({ windowMs: 60_000, max: 200 });
-
-const rateLimitByUser: Middleware = async (ctx, next) => {
-  const user = ctx.state.user;
-  const key = user ? `user:${user.id}` : `ip:${getClientIP(ctx)}`;
-  const result = userLimiter.check(key);
-
-  if (!result.allowed) {
-    return ctx.json({ error: "请求过于频繁" }, 429);
-  }
-
-  await next();
-};
-```
-
-## RateLimiter 接口
+通过自定义 `keyFn`，可以按用户身份而非 IP 进行限流：
 
 ```typescript
-interface RateLimiterOptions {
-  windowMs: number;  // 时间窗口（毫秒）
-  max: number;       // 窗口内最大请求数
-}
+app.use(
+  rateLimit({
+    windowMs: 60_000,
+    max: 200,
+    keyFn: (ctx) => {
+      const userId = ctx.headers.get("x-user-id");
+      return userId ? `user:${userId}` : `ip:${ctx.request.headers.get("x-forwarded-for") ?? "unknown"}`;
+    },
+    store: createMemoryRateLimitStore(),
+  }),
+);
+```
 
-interface RateLimitResult {
-  allowed: boolean;
-  limit: number;
-  remaining: number;
-  reset: number;       // 重置时间戳（Unix 秒）
-  retryAfter?: number; // 重试前需等待的毫秒数
-}
+## Redis 存储（分布式限流）
 
-interface RateLimiter {
-  check(key: string): RateLimitResult;
-  reset(key: string): void;
+多实例部署时，使用 `createRedisRateLimitStore` 接入 Redis 实现统一的限流计数：
+
+```typescript
+import { rateLimit, createRedisRateLimitStore } from "@ventostack/core";
+
+const redis = new Bun.Redis("redis://localhost:6379");
+
+app.use(
+  rateLimit({
+    windowMs: 60_000,
+    max: 100,
+    store: createRedisRateLimitStore({ client: redis }),
+  }),
+);
+```
+
+`createRedisRateLimitStore` 基于 Bun Redis 设计：
+
+```typescript
+const redis = new Bun.Redis("redis://localhost:6379");
+const store = createRedisRateLimitStore({ client: redis });
+```
+
+如果客户端支持 `eval`，会自动使用原子 Lua 脚本执行 `INCR + PEXPIRE`，彻底避免 race condition。
+
+## 自定义存储后端
+
+也可以完全自定义存储，只需实现 `RateLimitStore` 接口：
+
+```typescript
+interface RateLimitStore {
+  /**
+   * 增加计数
+   * @param key - 限流键
+   * @param windowMs - 时间窗口（毫秒）
+   * @returns 当前计数与重置时间
+   */
+  increment(key: string, windowMs: number): Promise<{ count: number; resetAt: number }>;
+  /**
+   * 重置计数
+   * @param key - 限流键
+   */
+  reset(key: string): Promise<void>;
 }
 ```
+
+## 安全注意事项
+
+### 代理头信任
+
+默认情况下 `trustProxyHeaders` 为 `false`，限流键仅从直接连接的客户端 IP 获取。如果应用部署在反向代理（如 Nginx、Cloudflare）之后，需要显式开启：
+
+```typescript
+rateLimit({
+  windowMs: 60_000,
+  max: 100,
+  trustProxyHeaders: true,  // 信任 X-Forwarded-For
+  store: createMemoryRateLimitStore(),
+});
+```
+
+**警告**：在直接暴露给公网的环境中开启 `trustProxyHeaders`，攻击者可通过伪造 `X-Forwarded-For` 绕过限流。
+
+### 多实例部署
+
+内存存储仅在单实例内生效。多实例部署时，使用 `createRedisRateLimitStore` 接入 Redis 实现统一的限流计数，详见上文 "Redis 存储" 章节。

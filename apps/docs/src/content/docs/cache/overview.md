@@ -3,14 +3,27 @@ title: 缓存层
 description: 使用 createCache 添加高性能缓存支持
 ---
 
-`@ventostack/cache` 提供了统一的缓存接口，底层可以切换内存缓存或 Redis，无需修改业务代码。
+`@ventostack/cache` 提供了统一的缓存接口，内置内存与 Redis 两种适配器。所有组件基于 `CacheAdapter` 接口构建，切换底层存储无需修改业务代码。
 
 ## 创建缓存
+
+### 内存缓存（开发/单进程）
 
 ```typescript
 import { createCache, createMemoryAdapter } from "@ventostack/cache";
 
 const cache = createCache(createMemoryAdapter());
+```
+
+### Redis 缓存（生产/分布式）
+
+```typescript
+import { createCache, createRedisAdapter } from "@ventostack/cache";
+
+const redis = new Bun.Redis("redis://localhost:6379");
+const cache = createCache(
+  createRedisAdapter({ client: redis, keyPrefix: "app:v1:" })
+);
 ```
 
 ## 基本操作
@@ -40,6 +53,19 @@ const exists = await cache.has("user:1");
 await cache.flush();
 ```
 
+## 标签缓存
+
+```typescript
+// 获取带标签的缓存视图
+const tagged = cache.tags(["users", "active"]);
+
+// 设置缓存并自动关联到标签
+await tagged.set("user:1", { id: 1, name: "Alice" }, { ttl: 300 });
+
+// 清除该标签关联的所有缓存键
+await tagged.flush();
+```
+
 ## 缓存穿透保护（remember）
 
 ```typescript
@@ -47,6 +73,18 @@ await cache.flush();
 const user = await cache.remember(
   `user:${id}`,
   300,  // TTL 秒
+  async () => {
+    return db.query(UserModel).where("id", "=", id).get();
+  }
+);
+```
+
+## 缓存击穿防护（singleflight）
+
+```typescript
+// 对同一 key 的并发请求只执行一次工厂函数
+const user = await cache.singleflight(
+  `user:${id}`,
   async () => {
     return db.query(UserModel).where("id", "=", id).get();
   }
@@ -93,5 +131,21 @@ interface Cache {
   flush(): Promise<void>;
   tags(tagNames: string[]): TaggedCache;
   remember<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T>;
+  singleflight<T>(key: string, factory: () => Promise<T>): Promise<T>;
+}
+
+interface TaggedCache {
+  get<T = unknown>(key: string): Promise<T | null>;
+  set(key: string, value: unknown, options?: Omit<CacheOptions, "tags">): Promise<void>;
+  flush(): Promise<void>;
 }
 ```
+
+## 其他缓存工具
+
+`@ventostack/cache` 还提供了以下独立工具：
+
+- **`createLock(adapter)`** — 基于缓存适配器的分布式锁
+- **`createL2Cache(l2Adapter, options?)`** — 本地 L1 + 远端 L2 二级缓存
+- **`createStampedeProtection(getter, setter, options?)`** — 缓存击穿/雪崩防护（singleflight + XFetch）
+- **`jitterTTL(baseTTL, jitterPercent?)`** / **`withJitter(adapter, options?)`** — TTL 抖动防雪崩

@@ -39,13 +39,8 @@ router.get("/", async (ctx) => {
 });
 
 router.get("/users/:id", async (ctx) => {
-  const { id } = ctx.params;
+  const id = ctx.params["id"];
   return ctx.json({ id, name: "Alice" });
-});
-
-// 使用类型标记，ctx.params.id 自动推导为 number
-router.get("/items/:id<int>", async (ctx) => {
-  return ctx.json({ id: ctx.params.id, type: typeof ctx.params.id });
 });
 
 const app = createApp({ port: 3000 });
@@ -75,9 +70,9 @@ import type { Middleware } from "@ventostack/core";
 
 // 日志中间件
 const logger: Middleware = async (ctx, next) => {
-  const start = Date.now();
+  const start = performance.now();
   const response = await next();
-  console.log(`${ctx.method} ${ctx.path} - ${Date.now() - start}ms`);
+  console.log(`${ctx.method} ${ctx.path} - ${Math.round(performance.now() - start)}ms`);
   return response;
 };
 
@@ -128,12 +123,10 @@ const UserModel = defineModel("users", {
 // 初始化依赖
 const logger = createLogger({ level: "info" });
 
-// 传入 url 即可自动使用 Bun.sql，无需手动配置 executor
-const db = createDatabase({ url: "sqlite://data/abc.db" });
+const db = createDatabase({ url: "sqlite://data/app.db" });
 
 const jwt = createJWT({
   secret: process.env.JWT_SECRET || "please_change_me_please_change_me",
-  defaultOptions: { expiresIn: 7 * 24 * 60 * 60 }, // 7 天
 });
 
 const passwordHasher = createPasswordHasher();
@@ -172,7 +165,7 @@ router.post("/auth/register", async (ctx) => {
   const passwordHash = await passwordHasher.hash(password);
   const user = await db
     .query(UserModel)
-    .insert({ email, password: passwordHash, name, role: "user" }, { returning: true });
+    .insert({ email, password: passwordHash, name, role: "user" });
 
   return ctx.json({ id: user?.id, email, name }, 201);
 });
@@ -191,7 +184,7 @@ router.post("/auth/login", async (ctx) => {
     return ctx.json({ error: "Invalid credentials" }, 401);
   }
 
-  const token = await jwt.sign({ sub: String(user.id), role: user.role as string });
+  const token = await jwt.sign({ sub: String(user.id), role: user.role });
   return ctx.json({ token });
 });
 
@@ -216,8 +209,8 @@ router.get("/users", async (ctx) => {
 });
 
 const app = createApp({ port: 3000 });
-app.use(errorHandler());
-app.use(requestLogger());
+app.use(errorHandler(logger));
+app.use(requestLogger(logger));
 app.use(router);
 
 // 启动前自动建表（示例用；生产环境应使用迁移工具）
@@ -230,10 +223,6 @@ await db.raw(`
     role TEXT
   )
 `);
-
-app.lifecycle.onAfterStart(() => {
-  logger.info("Server started", { port: 3000 });
-});
 
 await app.listen();
 ```

@@ -1,85 +1,62 @@
 ---
 title: Redis 适配器
-description: createRedisAdapter - 用于生产环境的 Redis 缓存
+description: 基于 Redis 的持久化缓存适配器
 ---
 
-`createRedisAdapter` 创建基于 Redis 的缓存适配器，适合生产环境和多实例部署。
+`createRedisAdapter` 实现了 `CacheAdapter` 接口，将缓存操作代理到 Redis，支持 TTL、键前缀与多种 Redis 客户端兼容。
 
-## 安装
-
-Redis 适配器需要 Redis 服务运行。无需额外安装 npm 包，VentoStack 使用原生协议连接：
-
-```bash
-# macOS
-brew install redis && brew services start redis
-
-# Docker
-docker run -d -p 6379:6379 redis:latest
-```
-
-## 用法
+## 基本用法
 
 ```typescript
 import { createCache, createRedisAdapter } from "@ventostack/cache";
 
-const cache = createCache({
-  adapter: createRedisAdapter({
-    url: process.env.REDIS_URL ?? "redis://localhost:6379",
-  }),
-  ttl: 300,
-});
-```
-
-## 高级配置
-
-```typescript
-const adapter = createRedisAdapter({
-  url: "redis://localhost:6379",
-  keyPrefix: "myapp:",     // 键前缀，避免键冲突
-  maxRetries: 3,           // 连接重试次数
-  connectTimeout: 5000,    // 连接超时（ms）
-});
+// 使用 Bun 原生 Redis
+const redis = new Bun.Redis("redis://localhost:6379");
+const cache = createCache(createRedisAdapter({ client: redis }));
 ```
 
 ## 键前缀
 
-在共享 Redis 实例上部署多个服务时，使用键前缀隔离：
+通过 `keyPrefix` 为所有缓存键添加前缀，实现多应用隔离：
 
 ```typescript
-// 服务 A
-const cacheA = createCache({
-  adapter: createRedisAdapter({ url: REDIS_URL, keyPrefix: "service-a:" }),
-});
+const cache = createCache(
+  createRedisAdapter({ client: redis, keyPrefix: "app:v1:" })
+);
 
-// 服务 B
-const cacheB = createCache({
-  adapter: createRedisAdapter({ url: REDIS_URL, keyPrefix: "service-b:" }),
-});
+await cache.set("user:1", { name: "Alice" });
+// Redis 中实际存储键为 "app:v1:user:1"
 ```
 
-## 环境变量配置
-
-推荐使用环境变量管理连接信息：
-
-```bash
-# .env
-REDIS_URL=redis://user:password@redis.example.com:6379/0
-```
+## 接口定义
 
 ```typescript
-const cache = createCache({
-  adapter: createRedisAdapter({ url: process.env.REDIS_URL! }),
-  ttl: 600,
-});
+/** Redis 缓存客户端最小接口 */
+interface RedisCacheClientLike {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string): Promise<unknown>;
+  expire(key: string, seconds: number): Promise<number>;
+  del(key: string): Promise<number>;
+  exists(key: string): Promise<number>;
+  flushdb(): Promise<unknown>;
+  keys(pattern: string): Promise<string[]>;
+}
+
+/** Redis 适配器选项 */
+interface RedisAdapterOptions {
+  /** Redis 客户端实例 */
+  client: RedisCacheClientLike;
+  /** 键前缀，默认 "" */
+  keyPrefix?: string;
+}
+
+/** 创建 Redis 缓存适配器 */
+function createRedisAdapter(options: RedisAdapterOptions): CacheAdapter;
 ```
 
-## 关闭连接
+## 注意事项
 
-```typescript
-const adapter = createRedisAdapter({ url: REDIS_URL });
-const cache = createCache({ adapter });
-
-app.onStop(async () => {
-  await adapter.close();
-});
-```
+- `createRedisAdapter` 使用 `set` + `expire` 两步设置 TTL，最大化兼容不同客户端。
+- `flush()` 调用 `flushdb()`，会清空当前 Redis 数据库，生产环境请谨慎使用。
+- `keys()` 依赖 Redis 的 `KEYS` 命令，在大量键场景下建议使用 `SCAN` 替代（可通过自定义适配器实现）。
+- 键前缀在 `keys()` 返回结果中会被自动去除，保持与无前缀模式一致的开发体验。

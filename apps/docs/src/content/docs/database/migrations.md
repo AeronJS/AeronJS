@@ -1,65 +1,47 @@
 ---
 title: 迁移系统
-description: 使用 createMigrator 管理数据库 schema 版本
+description: 使用 createMigrationRunner 管理数据库 schema 变更
 ---
 
-`createMigrator` 提供了完整的数据库迁移管理，支持顺序执行、回滚和迁移状态追踪。
+`createMigrationRunner` 提供了版本化数据库结构变更能力，支持顺序执行、回滚和迁移状态追踪。迁移记录持久化于 `__migrations` 表。
 
 ## 定义迁移
 
 ```typescript
-import { createMigrator } from "@ventostack/database";
+import { createMigrationRunner } from "@ventostack/database";
 import type { Migration } from "@ventostack/database";
 
 const migrations: Migration[] = [
   {
-    version: 1,
-    name: "create_users_table",
-    up: async (db) => {
-      await db.raw(`
+    name: "001_create_users_table",
+    up: async (exec) => {
+      await exec(`
         CREATE TABLE users (
           id SERIAL PRIMARY KEY,
           name VARCHAR(255) NOT NULL,
           email VARCHAR(255) UNIQUE NOT NULL,
-          password_hash VARCHAR(255) NOT NULL,
-          role VARCHAR(50) DEFAULT 'user',
-          active BOOLEAN DEFAULT true,
-          created_at TIMESTAMP DEFAULT NOW(),
-          updated_at TIMESTAMP DEFAULT NOW()
-        )
-      `);
-    },
-    down: async (db) => {
-      await db.raw("DROP TABLE IF EXISTS users");
-    },
-  },
-  {
-    version: 2,
-    name: "create_posts_table",
-    up: async (db) => {
-      await db.raw(`
-        CREATE TABLE posts (
-          id SERIAL PRIMARY KEY,
-          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-          title VARCHAR(500) NOT NULL,
-          content TEXT,
-          published BOOLEAN DEFAULT false,
           created_at TIMESTAMP DEFAULT NOW()
         )
       `);
     },
-    down: async (db) => {
-      await db.raw("DROP TABLE IF EXISTS posts");
+    down: async (exec) => {
+      await exec("DROP TABLE IF EXISTS users");
     },
   },
   {
-    version: 3,
-    name: "add_avatar_to_users",
-    up: async (db) => {
-      await db.raw("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)");
+    name: "002_create_posts_table",
+    up: async (exec) => {
+      await exec(`
+        CREATE TABLE posts (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          title VARCHAR(500) NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
     },
-    down: async (db) => {
-      await db.raw("ALTER TABLE users DROP COLUMN IF EXISTS avatar_url");
+    down: async (exec) => {
+      await exec("DROP TABLE IF EXISTS posts");
     },
   },
 ];
@@ -68,33 +50,32 @@ const migrations: Migration[] = [
 ## 运行迁移
 
 ```typescript
-const db = createQueryBuilder({ url: process.env.DATABASE_URL! });
-const migrator = createMigrator(db, migrations);
+// 创建迁移运行器
+const runner = createMigrationRunner(db.raw);
+
+// 注册迁移
+for (const m of migrations) {
+  runner.addMigration(m);
+}
 
 // 应用所有待执行的迁移
-await migrator.up();
+const executed = await runner.up();
+console.log("已执行迁移:", executed);
 
-// 应用到指定版本
-await migrator.up(2);
+// 回滚最近 1 个迁移
+const rolledBack = await runner.down();
+console.log("已回滚迁移:", rolledBack);
 
-// 回滚最近一次迁移
-await migrator.down();
-
-// 回滚到指定版本
-await migrator.down(1);
+// 回滚最近 3 个迁移
+await runner.down(3);
 ```
 
 ## 查询迁移状态
 
 ```typescript
-// 获取当前版本
-const version = await migrator.currentVersion();
-console.log(`当前数据库版本: ${version}`);
-
-// 获取所有迁移状态
-const status = await migrator.status();
-status.forEach(({ migration, executed, executedAt }) => {
-  console.log(`v${migration.version} ${migration.name}: ${executed ? "已执行" : "待执行"}`);
+const status = await runner.status();
+status.forEach(({ name, executedAt }) => {
+  console.log(`${name}: ${executedAt ? "已执行" : "待执行"}`);
 });
 ```
 
@@ -104,26 +85,46 @@ status.forEach(({ migration, executed, executedAt }) => {
 const app = createApp({ port: 3000 });
 
 app.onStart(async () => {
-  console.log("运行数据库迁移...");
-  await migrator.up();
-  console.log("数据库迁移完成");
+  const runner = createMigrationRunner(db.raw);
+  for (const m of migrations) {
+    runner.addMigration(m);
+  }
+  const executed = await runner.up();
+  console.log("数据库迁移完成", executed);
 });
 ```
 
-## Migrator 接口
+## MigrationRunner 接口
 
 ```typescript
 interface Migration {
-  version: number;
   name: string;
-  up: (db: QueryBuilder) => Promise<void>;
-  down: (db: QueryBuilder) => Promise<void>;
+  up: (executor: (text: string, params?: unknown[]) => Promise<unknown>) => Promise<void>;
+  down: (executor: (text: string, params?: unknown[]) => Promise<unknown>) => Promise<void>;
 }
 
-interface Migrator {
-  up(targetVersion?: number): Promise<void>;
-  down(targetVersion?: number): Promise<void>;
-  currentVersion(): Promise<number>;
+interface MigrationStatus {
+  name: string;
+  executedAt: Date | null;
+}
+
+interface MigrationRunner {
+  addMigration(migration: Migration): void;
+  up(): Promise<string[]>;
+  down(steps?: number): Promise<string[]>;
   status(): Promise<MigrationStatus[]>;
 }
 ```
+
+## 注意事项
+
+- 迁移名称 `name` 是唯一标识，建议使用时间戳或序号前缀（如 `001_`、`20240101_`）保证顺序。
+- `up()` 按名称升序执行所有未执行的迁移。
+- `down(steps)` 按名称倒序回滚最近 `steps` 个已执行迁移，默认回滚 1 个。
+- 迁移执行器 `exec` 接收 SQL 字符串和可选的参数数组，与 `db.raw` 签名一致。
+- `__migrations` 表自动创建，无需手动维护。
+- 重复注册相同 `name` 的迁移会抛出错误。
+
+:::caution
+每个迁移在 `up()` 和 `down()` 内部都运行在独立的数据库事务中（`BEGIN / COMMIT / ROLLBACK`）。如果某个迁移失败，该迁移内的所有变更会自动回滚，且迁移记录不会被写入或删除。
+:::

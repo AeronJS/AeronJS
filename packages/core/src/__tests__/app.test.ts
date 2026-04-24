@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 import { createApp } from "../app";
 import { NotFoundError } from "../errors";
 import type { Middleware } from "../middleware";
@@ -257,6 +257,49 @@ describe("App HTTP integration", () => {
 
     await app.close();
     expect(calls).toContain("beforeStop");
+  });
+
+  test("lifecycle beforeStop runs on SIGINT", async () => {
+    const calls: string[] = [];
+    const app = createApp();
+    app.lifecycle.onBeforeStop(() => calls.push("beforeStop"));
+    app.router.get("/test", (ctx) => ctx.text("ok"));
+
+    const port = 40000 + Math.floor(Math.random() * 10000);
+    await app.listen(port);
+
+    const originalExit = process.exit;
+    const exitMock = mock((_code?: number) => undefined as never);
+    process.exit = exitMock as typeof process.exit;
+
+    try {
+      process.emit("SIGINT");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(calls).toContain("beforeStop");
+    } finally {
+      process.exit = originalExit;
+    }
+  });
+
+  test("SIGINT exits the process after graceful shutdown", async () => {
+    const app = createApp();
+    app.lifecycle.onBeforeStop(() => {});
+    app.router.get("/test", (ctx) => ctx.text("ok"));
+
+    const port = 40000 + Math.floor(Math.random() * 10000);
+    await app.listen(port);
+
+    const originalExit = process.exit;
+    const exitMock = mock((_code?: number) => undefined as never);
+    process.exit = exitMock as typeof process.exit;
+
+    try {
+      process.emit("SIGINT");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(exitMock).toHaveBeenCalledWith(0);
+    } finally {
+      process.exit = originalExit;
+    }
   });
 
   test("close() is idempotent", async () => {

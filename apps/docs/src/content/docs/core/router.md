@@ -200,7 +200,7 @@ router.get("/users/:id", {
 });
 ```
 
-`responses` Schema 同时用于 OpenAPI 文档自动生成。
+`responses` Schema 同时用于 OpenAPI 文档自动生成和运行时响应校验。
 
 ## OpenAPI 自动推导
 
@@ -312,6 +312,20 @@ const mainRouter = createRouter();
 mainRouter.merge(subRouter);
 ```
 
+## 命名路由
+
+使用 `namedRoute` 注册带名称的路由，可通过 `url()` 生成 URL：
+
+```typescript
+router.namedRoute("user-detail", "GET", "/users/:id", async (ctx) => {
+  return ctx.json(await getUser(ctx.params.id));
+});
+
+// 生成 URL
+const url = router.url("user-detail", { id: "123" });
+// "/users/123"
+```
+
 ## 路由中间件
 
 路由级中间件只对该路由生效：
@@ -329,6 +343,18 @@ router.use(requireAuth);
 router.get("/protected", async (ctx) => ctx.json(ctx.state.user));
 ```
 
+## 路由文档元数据
+
+使用 `doc()` 为已有路由附加 OpenAPI 文档信息：
+
+```typescript
+router.get("/users", async (ctx) => ctx.json(await getUsers()));
+router.doc("GET", "/users", {
+  summary: "获取用户列表",
+  tags: ["users"],
+});
+```
+
 ## 注册到应用
 
 ```typescript
@@ -342,18 +368,23 @@ await app.listen();
 ```typescript
 interface Router {
   get<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
-  get<Path extends string>(path: Path, config: RouteConfig<InferParams<Path>>, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
+  get<Path extends string>(path: Path, config: RouteConfig, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
   post<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
-  post<Path extends string>(path: Path, config: RouteConfig<InferParams<Path>>, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
+  post<Path extends string>(path: Path, config: RouteConfig, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
   put<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
-  put<Path extends string>(path: Path, config: RouteConfig<InferParams<Path>>, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
+  put<Path extends string>(path: Path, config: RouteConfig, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
   patch<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
-  patch<Path extends string>(path: Path, config: RouteConfig<InferParams<Path>>, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
+  patch<Path extends string>(path: Path, config: RouteConfig, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
   delete<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
-  delete<Path extends string>(path: Path, config: RouteConfig<InferParams<Path>>, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
+  delete<Path extends string>(path: Path, config: RouteConfig, handler: RouteHandler<...>, ...middleware: Middleware[]): Router;
   use(...middleware: Middleware[]): Router;
   group(prefix: string, callback: (group: Router) => void, ...middleware: Middleware[]): Router;
   resource(prefix: string, handlers: ResourceHandlers, ...middleware: Middleware[]): Router;
+  namedRoute(name: string, method: string, path: string, handler: RouteHandler, ...middleware: Middleware[]): Router;
+  url(name: string, params?: Record<string, string>): string;
+  routes(): readonly RouteDefinition[];
+  compile(globalMiddleware?: Middleware[]): CompiledRoutes;
+  doc(method: string, path: string, metadata: Record<string, unknown>): Router;
   merge(router: Router): Router;
 }
 

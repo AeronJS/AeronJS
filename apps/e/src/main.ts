@@ -2,7 +2,7 @@ import { createApp, createRouter, requestLogger, errorHandler, type Middleware, 
 import { createDatabase, defineModel, column } from "@ventostack/database";
 import { createJWT, createRBAC, createPasswordHasher } from "@ventostack/auth";
 import { createCache, createMemoryAdapter } from "@ventostack/cache";
-import { createLogger } from "@ventostack/observability";
+import { createHealthCheck, createLogger } from "@ventostack/observability";
 import { createOpenAPIGenerator, syncRouterToOpenAPI, createScalarUIPlugin } from "@ventostack/openapi";
 
 // 定义数据模型
@@ -14,11 +14,21 @@ const UserModel = defineModel("users", {
   role: column.varchar({ length: 50 }),
 });
 
+const health = createHealthCheck();
+
 // 初始化依赖
 const logger = createLogger({ level: "info" });
-
 // 传入 url 即可自动使用 Bun.sql，无需手动配置 executor
 const db = createDatabase({ url: 'sqlite://data/abc.db' });
+
+health.addCheck('db', async () => {
+  try {
+    await db.raw("SELECT 1");
+    return true;
+  } catch {
+    return "Database connection failed";
+  }
+})
 
 const jwt = createJWT({
   secret: process.env.JWT_SECRET || 'please_change_me_please_change_me',
@@ -44,6 +54,16 @@ rbac.addRole({
 });
 
 const router = createRouter();
+
+router.get("/health", (ctx) => {
+  return ctx.json(health.live());
+});
+
+router.get("/health/ready", async (ctx) => {
+  const status = await health.ready();
+  const code = status.status === "ok" ? 200 : 503;
+  return ctx.json(status, code);
+});
 
 // 注册路由
 router.post("/auth/register", async (ctx) => {
@@ -112,7 +132,7 @@ router.get('/things', {
   responses: {
     200: {
       page: { type: "int" },
-      limit: { type: "string" },
+      limit: { type: "int" },
     },
   },
 }, (ctx) => {
@@ -221,6 +241,17 @@ const timingMiddleware: Middleware = async (ctx, next) => {
 
 app.use(timingMiddleware);
 
+import { rateLimit, createMemoryRateLimitStore } from "@ventostack/core";
+
+app.use(
+  rateLimit({
+    windowMs: 60_000,  // 时间窗口：1 分钟
+    max: 3,          // 窗口内最大请求数
+    message: "Too many requests",
+    store: createMemoryRateLimitStore(),
+  }),
+);
+
 // 执行顺序: A前 -> B前 -> C处理 -> B后 -> A后
 const middlewareA: Middleware = async (ctx, next) => {
   console.log("A: before");
@@ -242,6 +273,25 @@ app.use(cors({ origin: "http://localhost:4321/" }));
 app.use(requestId("X-Request-Id"));
 
 app.use(router);
+
+app.lifecycle.onBeforeStart(async () => {
+  // await db.connect();
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  console.log("数据库已连接");
+});
+
+app.lifecycle.onBeforeRouteCompile(() => {
+  // registerDynamicRoutes(app.router);
+});
+
+app.lifecycle.onAfterStart(() => {
+  console.log("服务已启动");
+});
+
+app.lifecycle.onBeforeStop(async () => {
+  await db.close();
+  console.log("数据库连接已关闭");
+});
 
 // ── OpenAPI 文档生成 ──────────────────────────────────
 

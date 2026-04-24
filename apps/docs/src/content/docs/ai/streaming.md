@@ -1,44 +1,91 @@
 ---
 title: 流式响应
-description: 使用 createStreamingHandler 处理 AI 流式输出
+description: 使用 Context.stream 或标准 Web API 实现 SSE 流式响应
 ---
 
-`createStreamingHandler` 简化了 AI 流式响应（Server-Sent Events）的处理，自动管理流的生命周期。
+VentoStack 的流式响应通过 `Context.stream()` 方法或标准 Web API 实现，不依赖 `@ventostack/ai` 包。
 
-## 基本用法
+## 使用 ctx.stream
+
+`ctx.stream(body, contentType)` 直接返回流式响应：
 
 ```typescript
-import { createStreamingHandler } from "@ventostack/ai";
-import { createLLMAdapter } from "@ventostack/ai";
+import { createApp, createRouter } from "@ventostack/core";
 
-const llm = createLLMAdapter({ provider: "openai", model: "gpt-4o" });
-const streaming = createStreamingHandler();
+const router = createRouter();
 
-router.post("/ai/stream", async (ctx) => {
-  const { message } = await ctx.body<{ message: string }>();
+router.get("/events", async (ctx) => {
+  const stream = new ReadableStream({
+    start(controller) {
+      let count = 0;
+      const interval = setInterval(() => {
+        count++;
+        controller.enqueue(`data: ${JSON.stringify({ count, time: Date.now() })}
+\n`);
+        if (count >= 5) {
+          clearInterval(interval);
+          controller.close();
+        }
+      }, 1000);
+    },
+  });
 
-  return streaming.stream(async function* () {
-    const stream = await llm.stream([{ role: "user", content: message }]);
+  return ctx.stream(stream, "text/event-stream");
+});
+```
 
-    for await (const chunk of stream) {
-      yield { type: "delta", text: chunk.delta };
-    }
+## 标准 SSE 响应
 
-    yield { type: "done" };
+也可以直接使用标准 `Response` 构造 SSE 流：
+
+```typescript
+router.post("/ai/chat", async (ctx) => {
+  const { message } = await ctx.request.json() as { message: string };
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      // 模拟 AI 流式输出
+      const words = ["你好", "，", "这是", "一个", "流式", "响应", "。"];
+      for (const word of words) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        controller.enqueue(`data: ${JSON.stringify({ text: word })}
+\n`);
+      }
+      controller.enqueue("data: [DONE]\n\n");
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
   });
 });
 ```
 
 ## 客户端消费
 
-```javascript
-const response = await fetch("/ai/stream", {
+浏览器使用 `EventSource` 或 `fetch` + `ReadableStream` 消费 SSE：
+
+```typescript
+// 使用 EventSource（仅支持 GET）
+const source = new EventSource("/events");
+source.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log(data);
+};
+
+// 使用 fetch + ReadableStream（支持 POST 和自定义头）
+const response = await fetch("/ai/chat", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ message: "解释量子纠缠" }),
+  body: JSON.stringify({ message: "你好" }),
 });
 
-const reader = response.body.getReader();
+const reader = response.body!.getReader();
 const decoder = new TextDecoder();
 
 while (true) {
@@ -48,44 +95,37 @@ while (true) {
   const lines = decoder.decode(value).split("\n");
   for (const line of lines) {
     if (line.startsWith("data: ")) {
-      const data = JSON.parse(line.slice(6));
-      if (data.type === "delta") {
-        process.stdout.write(data.text); // 实时显示文本
+      const data = line.slice(6);
+      if (data === "[DONE]") {
+        console.log("流结束");
+      } else {
+        console.log(JSON.parse(data));
       }
     }
   }
 }
 ```
 
-## 带进度的流式响应
+## 大文件流式下载
 
 ```typescript
-router.post("/ai/analyze", async (ctx) => {
-  const { documents } = await ctx.body();
+router.get("/download", async (ctx) => {
+  const file = Bun.file("/path/to/large-file.zip");
 
-  return streaming.stream(async function* () {
-    yield { type: "status", message: "正在分析文档..." };
-
-    for (let i = 0; i < documents.length; i++) {
-      const analysis = await llm.complete(`分析：${documents[i]}`);
-
-      yield {
-        type: "progress",
-        current: i + 1,
-        total: documents.length,
-        result: analysis.text,
-      };
-    }
-
-    yield { type: "done", message: "分析完成" };
-  });
+  return ctx.stream(file.stream(), "application/zip");
 });
 ```
 
-## StreamingHandler 接口
+## Context.stream 接口
 
 ```typescript
-interface StreamingHandler {
-  stream(generator: () => AsyncGenerator<unknown>): Response;
+interface Context {
+  /**
+   * 返回流式响应
+   * @param body - 可读流
+   * @param contentType - Content-Type，默认 application/octet-stream
+   * @returns Response 对象
+   */
+  stream(body: ReadableStream, contentType?: string): Response;
 }
 ```

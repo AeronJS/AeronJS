@@ -10,26 +10,27 @@ description: createMemoryAdapter - 用于开发和测试的内存缓存
 ```typescript
 import { createCache, createMemoryAdapter } from "@ventostack/cache";
 
-const cache = createCache({
-  adapter: createMemoryAdapter(),
-  ttl: 300,
-});
+const cache = createCache(createMemoryAdapter());
 ```
 
 ## 特性
 
 - **零依赖**：无需外部服务
 - **自动过期**：基于 TTL 自动清理过期条目
-- **内存限制**：可配置最大条目数，超出时使用 LRU 策略淘汰
+- **模式匹配**：支持通配符 `*` 的键列表查询
 - **快速**：直接内存访问，延迟极低
 
-## 高级配置
+## 接口
 
 ```typescript
-const adapter = createMemoryAdapter({
-  maxSize: 1000,     // 最大缓存条目数
-  checkPeriod: 60,   // 过期检查间隔（秒）
-});
+interface CacheAdapter {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, ttl?: number): Promise<void>;
+  del(key: string): Promise<void>;
+  has(key: string): Promise<boolean>;
+  flush(): Promise<void>;
+  keys(pattern: string): Promise<string[]>;
+}
 ```
 
 ## 注意事项

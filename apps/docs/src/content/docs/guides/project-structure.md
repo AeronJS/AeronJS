@@ -9,19 +9,23 @@ description: VentoStack 推荐的项目结构和文件组织方式
 my-ventostack-app/
   src/
     main.ts              - 应用入口
+    app.ts               - 应用组装（依赖注入）
+    config.ts            - 应用配置
     routes/              - 路由模块
+      index.ts           - 路由注册入口
       users.ts
       auth.ts
+      health.ts
     middleware/          - 中间件
       auth.ts
       logger.ts
+      validation.ts
     services/            - 业务逻辑
       user-service.ts
-    db/                  - 数据库相关
-      migrations/
-        001_create_users.ts
-      schema.ts
-    config.ts            - 应用配置
+      auth-service.ts
+    events/              - 领域事件
+      user-events.ts
+    openapi.ts           - OpenAPI 文档配置
   package.json
   tsconfig.json
   bunfig.toml
@@ -29,69 +33,91 @@ my-ventostack-app/
 
 ## 入口文件
 
-`src/main.ts` 负责组装所有模块：
+`src/main.ts` 负责启动应用：
 
 ```typescript
-import { createApp } from "@ventostack/core";
-import { createLogger } from "@ventostack/observability";
-import { usersRouter } from "./routes/users";
-import { authRouter } from "./routes/auth";
-import { loggerMiddleware } from "./middleware/logger";
-import { config } from "./config";
+import { createExampleApp } from "./app";
 
-const logger = createLogger({ level: config.logLevel });
-const app = createApp({ port: config.port });
-
-// 中间件
-app.use(loggerMiddleware(logger));
-
-// 路由
-app.use(authRouter());
-app.use(usersRouter());
-
-app.lifecycle.onAfterStart(() => logger.info("Server started", { port: config.port }));
-app.lifecycle.onBeforeStop(() => logger.info("Server stopped"));
+const { app } = await createExampleApp({
+  db: createDatabase({ url: process.env.DATABASE_URL! }),
+});
 
 await app.listen();
 ```
 
+`src/app.ts` 负责组装所有模块：
+
+```typescript
+import { createApp } from "@ventostack/core";
+import { createLogger } from "@ventostack/observability";
+import { registerRoutes } from "./routes";
+import { requestLogger, errorHandler } from "./middleware/common";
+import { config } from "./config";
+
+export interface CreateAppOptions {
+  db: Database;
+  config?: Partial<AppConfig>;
+}
+
+export async function createExampleApp(options: CreateAppOptions) {
+  const logger = createLogger({ level: "info" });
+  const app = createApp({ port: config.port });
+
+  app.use(errorHandler(logger));
+  app.use(requestLogger(logger));
+
+  registerRoutes({ router: app.router, userService, authService });
+
+  return { app, db: options.db, logger };
+}
+```
+
 ## 路由模块
 
-每个路由文件返回一个 router 实例：
+路由文件接收依赖并注册路由：
 
 ```typescript
 // src/routes/users.ts
-import { createRouter } from "@ventostack/core";
-import { defineModel, column } from "@ventostack/database";
-import type { Database } from "@ventostack/database";
+import type { Router } from "@ventostack/core";
+import type { createUserService } from "../services/user-service";
 
-const UserModel = defineModel("users", {
-  id: column.bigint({ primary: true, autoIncrement: true }),
-  name: column.varchar({ length: 255 }),
-  email: column.varchar({ length: 255, unique: true }),
-});
+export interface UserRoutesDeps {
+  userService: ReturnType<typeof createUserService>;
+}
 
-export function usersRouter(db: Database) {
-  const router = createRouter();
+export function registerUserRoutes(router: Router, deps: UserRoutesDeps): void {
+  const { userService } = deps;
 
-  router.get("/users", async (ctx) => {
-    const users = await db.query(UserModel).list();
-    return ctx.json(users);
+  router.get("/api/users", async (ctx) => {
+    const users = await userService.listUsers();
+    return ctx.json({ data: users });
   });
 
-  router.post("/users", async (ctx) => {
-    const body = await ctx.body<{ name: string; email: string }>();
-    const user = await db.query(UserModel).insert(body, { returning: true });
-    return ctx.json(user, 201);
-  });
-
-  router.get("/users/:id<int>", async (ctx) => {
-    const user = await db.query(UserModel).where("id", "=", ctx.params.id).get();
-    if (!user) return ctx.json({ error: "Not found" }, 404);
+  router.get("/api/users/:id", async (ctx) => {
+    const id = ctx.params["id"]!;
+    const user = await userService.getUserById(id);
     return ctx.json(user);
   });
+}
+```
 
-  return router;
+路由入口统一注册：
+
+```typescript
+// src/routes/index.ts
+import type { Router } from "@ventostack/core";
+import { registerUserRoutes } from "./users";
+import { registerAuthRoutes } from "./auth";
+
+export interface RegisterRoutesDeps {
+  router: Router;
+  userService: ReturnType<typeof createUserService>;
+  authService: ReturnType<typeof createAuthService>;
+}
+
+export function registerRoutes(deps: RegisterRoutesDeps): void {
+  registerUserRoutes(deps.router, { userService: deps.userService });
+  registerAuthRoutes(deps.router, { authService: deps.authService });
 }
 ```
 
@@ -99,14 +125,19 @@ export function usersRouter(db: Database) {
 
 ```typescript
 // src/config.ts
-import { createConfig } from "@ventostack/core";
+export interface AppConfig {
+  port: number;
+  jwtSecret: string;
+  jwtExpiresIn: number;
+  env: string;
+}
 
-export const config = createConfig({
-  port: { type: "number", env: "PORT", default: 3000 },
-  logLevel: { type: "string", env: "LOG_LEVEL", default: "info" },
-  databaseUrl: { type: "string", env: "DATABASE_URL", required: true },
-  jwtSecret: { type: "string", env: "JWT_SECRET", required: true, sensitive: true },
-}, process.env);
+export const defaultConfig: AppConfig = {
+  port: 3000,
+  jwtSecret: process.env.JWT_SECRET || "change-me",
+  jwtExpiresIn: 7 * 24 * 60 * 60,
+  env: process.env.NODE_ENV || "development",
+};
 ```
 
 ## Monorepo 结构
@@ -117,7 +148,7 @@ export const config = createConfig({
 my-project/
   apps/
     api/                 - 后端 API
-    admin/               - 管理后台
+    docs/                - 文档站点
   packages/
     shared/              - 共享类型和工具
     ui/                  - 前端组件库

@@ -195,14 +195,14 @@ function createQueryExecutor<T>(
       },
 
       async get(): Promise<Pick<T, S> | undefined> {
-        const limited = nextBuilder.limit(1);
+        const limited = nextBuilder.hasLimit() ? nextBuilder : nextBuilder.limit(1);
         const { text, params } = limited.toSQL();
         const rows = await executor(text, params);
         return (rows as Pick<T, S>[])[0];
       },
 
       async count(): Promise<number> {
-        const countBuilder = nextBuilder.select("COUNT(*) as count");
+        const countBuilder = nextBuilder.select("COUNT(*) as count").clearLimit().clearOffset();
         const { text, params } = countBuilder.toSQL();
         const rows = await executor(text, params);
         const first = (rows as Array<{ count: number }>)[0];
@@ -395,6 +395,7 @@ export function createDatabase(config: DatabaseConfig): Database {
  * @returns 事务数据库实例
  */
 function createTransactionDatabase(executor: SqlExecutor): Database {
+  let savepointCounter = 0;
   return {
     query<T>(model: ModelDefinition<T>): QueryExecutor<T> {
       return createQueryExecutor(model, executor);
@@ -404,7 +405,7 @@ function createTransactionDatabase(executor: SqlExecutor): Database {
     },
     async transaction<T>(fn: (tx: Database) => Promise<T>): Promise<T> {
       // 嵌套事务使用 SAVEPOINT
-      const savepointName = `sp_${Date.now()}`;
+      const savepointName = `sp_${++savepointCounter}`;
       await executor(`SAVEPOINT ${savepointName}`);
       try {
         const result = await fn(this);

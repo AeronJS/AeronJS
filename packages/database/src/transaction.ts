@@ -120,23 +120,34 @@ export function createTransactionManager(executor: SqlExecutor): TransactionMana
 
     async savepoint(name: string): Promise<void> {
       if (!active) throw new Error("No active transaction");
+      if (savepoints.includes(name)) throw new Error(`Savepoint ${name} already exists`);
       await executor(`SAVEPOINT ${name}`);
       savepoints.push(name);
+      transactionDepth++;
     },
 
     async rollbackTo(name: string): Promise<void> {
       if (!active) throw new Error("No active transaction");
+      const idx = savepoints.indexOf(name);
+      if (idx === -1) throw new Error(`Savepoint ${name} not found`);
       await executor(`ROLLBACK TO SAVEPOINT ${name}`);
+      const removed = savepoints.length - idx - 1;
+      savepoints.length = idx + 1;
+      transactionDepth -= removed;
     },
 
     async releaseSavepoint(name: string): Promise<void> {
       if (!active) throw new Error("No active transaction");
+      if (savepoints[savepoints.length - 1] !== name) {
+        throw new Error(`Savepoint ${name} is not the most recent savepoint`);
+      }
       await executor(`RELEASE SAVEPOINT ${name}`);
-      const idx = savepoints.indexOf(name);
-      if (idx !== -1) savepoints.splice(idx, 1);
+      savepoints.pop();
+      transactionDepth--;
     },
 
     async nested<T>(fn: (executor: SqlExecutor) => Promise<T>): Promise<T> {
+      if (!active) throw new Error("No active transaction");
       await this.begin();
       try {
         const result = await fn(executor);

@@ -1,100 +1,104 @@
 ---
-title: 告警系统
-description: 使用 createAlertManager 配置应用告警规则
+title: 错误上报
+description: 使用 createErrorReporter 配置多通道错误上报
 ---
 
-`createAlertManager` 提供了基于阈值和规则的告警系统，支持多种通知渠道。
+`createErrorReporter` 提供了多通道错误上报能力，支持采样率控制、忽略模式与环境/服务标识。内置 Sentry、钉钉 Webhook、通用 Webhook 三种通道。
 
 ## 基本用法
 
 ```typescript
-import { createAlertManager } from "@ventostack/observability";
+import { createErrorReporter, createDingTalkChannel } from "@ventostack/observability";
 
-const alertManager = createAlertManager({
-  channels: {
-    slack: {
-      type: "webhook",
-      url: process.env.SLACK_WEBHOOK_URL!,
-    },
-    email: {
-      type: "email",
-      to: ["ops@example.com"],
-    },
-  },
+const reporter = createErrorReporter({
+  channels: [
+    createDingTalkChannel(process.env.DINGTALK_WEBHOOK_URL!),
+  ],
+  sampleRate: 1.0,
+  environment: "production",
+  serviceName: "api-server",
 });
 ```
 
-## 定义告警规则
+## 上报错误
 
 ```typescript
-// 错误率告警
-alertManager.addRule({
-  name: "high-error-rate",
-  condition: async () => {
-    const errorCount = await metrics.get("http_requests_total", { status: "500" });
-    const totalCount = await metrics.get("http_requests_total");
-    return errorCount / totalCount > 0.05; // 错误率超过 5%
-  },
-  severity: "critical",
-  channels: ["slack", "email"],
-  message: "HTTP 错误率超过 5%，请立即检查！",
-  cooldown: 300_000, // 5 分钟内不重复告警
-});
-
-// 响应时间告警
-alertManager.addRule({
-  name: "slow-response",
-  condition: async () => {
-    const p99Latency = await metrics.getPercentile("http_request_duration_ms", 99);
-    return p99Latency > 2000; // P99 超过 2 秒
-  },
-  severity: "warning",
-  channels: ["slack"],
-  message: "P99 响应时间超过 2 秒",
-});
-```
-
-## 手动触发告警
-
-```typescript
-await alertManager.fire({
-  rule: "deployment-failed",
-  severity: "critical",
-  message: "生产环境部署失败",
-  context: { version: "1.2.3", environment: "production" },
-});
-```
-
-## 启动告警检查
-
-```typescript
-app.onStart(() => {
-  alertManager.start(60_000); // 每分钟检查一次
-});
-
-app.onStop(async () => {
-  alertManager.stop();
-});
-```
-
-## AlertManager 接口
-
-```typescript
-type AlertSeverity = "info" | "warning" | "critical";
-
-interface AlertRule {
-  name: string;
-  condition: () => boolean | Promise<boolean>;
-  severity: AlertSeverity;
-  channels: string[];
-  message: string;
-  cooldown?: number;
+// 普通错误
+try {
+  await riskyOperation();
+} catch (err) {
+  await reporter.capture(err, { userId: "123" });
 }
 
-interface AlertManager {
-  addRule(rule: AlertRule): void;
-  fire(alert: { rule: string; severity: AlertSeverity; message: string; context?: unknown }): Promise<void>;
-  start(intervalMs: number): void;
-  stop(): void;
+// 警告
+await reporter.captureWarning("磁盘使用率超过 80%", { disk: "/data" });
+
+// 致命错误
+await reporter.captureFatal(new Error("数据库连接断开"), { db: "primary" });
+```
+
+## 配置采样与忽略
+
+```typescript
+const reporter = createErrorReporter({
+  channels: [createSentryChannel(process.env.SENTRY_DSN!)],
+  sampleRate: 0.5,              // 只上报 50% 的错误
+  ignorePatterns: [/ECONNREFUSED/, /timeout/],
+  environment: process.env.NODE_ENV,
+  serviceName: "my-service",
+});
+```
+
+## 内置通道
+
+```typescript
+import {
+  createSentryChannel,
+  createDingTalkChannel,
+  createWebhookChannel,
+} from "@ventostack/observability";
+
+// Sentry
+const sentry = createSentryChannel("https://...@sentry.io/...");
+
+// 钉钉
+const dingtalk = createDingTalkChannel("https://oapi.dingtalk.com/robot/send?access_token=...");
+
+// 通用 Webhook
+const webhook = createWebhookChannel("https://alerts.example.com/webhook", {
+  "X-Api-Key": "secret",
+});
+```
+
+## ErrorReporter 接口
+
+```typescript
+interface ErrorReporterConfig {
+  channels: ErrorChannel[];
+  sampleRate?: number;
+  ignorePatterns?: RegExp[];
+  environment?: string;
+  serviceName?: string;
+}
+
+interface ErrorChannel {
+  name: string;
+  report(error: ErrorReport): Promise<void>;
+}
+
+interface ErrorReport {
+  message: string;
+  stack?: string;
+  level: "error" | "warning" | "fatal";
+  timestamp: number;
+  context?: Record<string, unknown>;
+  environment?: string;
+  serviceName?: string;
+}
+
+interface ErrorReporter {
+  capture(error: Error | string, context?: Record<string, unknown>, level?: ErrorReport["level"]): Promise<void>;
+  captureWarning(message: string, context?: Record<string, unknown>): Promise<void>;
+  captureFatal(error: Error | string, context?: Record<string, unknown>): Promise<void>;
 }
 ```

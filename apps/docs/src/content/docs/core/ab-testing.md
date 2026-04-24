@@ -3,7 +3,7 @@ title: A/B 测试
 description: 使用 createABTestManager 进行功能灰度发布和 A/B 测试
 ---
 
-`createABTestManager` 提供了完整的 A/B 测试和灰度发布功能，支持按用户 ID 哈希分配、权重控制和粘性分配。
+`createABTestManager` 提供了 A/B 测试和灰度发布功能，支持按用户 ID 哈希分配、权重控制和粘性分配。
 
 ## 基本用法
 

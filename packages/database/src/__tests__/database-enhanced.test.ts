@@ -243,7 +243,7 @@ describe("QueryExecutor.orWhere", () => {
     const db = createDatabase({ executor });
     await db.query(UserModel).where("name", "=", "Alice").orWhere("name", "=", "Bob").list();
 
-    expect(calls[0]!.text).toBe("SELECT * FROM users WHERE name = $1 OR name = $2");
+    expect(calls[0]!.text).toBe("SELECT * FROM users WHERE (name = $1 OR name = $2)");
     expect(calls[0]!.params).toEqual(["Alice", "Bob"]);
   });
 });

@@ -18,9 +18,8 @@ await app.listen();
 
 ```typescript
 interface AppConfig {
-  port?: number;          // 监听端口，默认 3000
-  host?: string;          // 监听地址，默认 "0.0.0.0"
-  development?: boolean;  // 开发模式，启用详细错误信息
+  port?: number;      // 监听端口，默认 3000
+  hostname?: string;  // 监听主机名，默认 "0.0.0.0"
 }
 ```
 
@@ -66,7 +65,7 @@ await app.listen();
 
 ## 优雅停机
 
-VentoStack 会自动处理 `SIGINT` 和 `SIGTERM` 信号，在关闭前触发 `onStop` 回调：
+VentoStack 在关闭流程里会触发 `onBeforeStop` 回调：
 
 ```typescript
 const app = createApp({ port: 3000 });
@@ -81,6 +80,20 @@ app.lifecycle.onBeforeStop(async () => {
 await app.listen();
 ```
 
+## 注册可访问地址
+
+应用启动后可以注册可访问地址，用于日志输出或健康检查：
+
+```typescript
+app.addUrl("API Docs", "/docs");
+app.addUrl("Health", "/health");
+
+// 读取已注册的地址
+for (const url of app.urls) {
+  console.log(`${url.label}: ${url.path}`);
+}
+```
+
 ## VentoStackApp 接口
 
 ```typescript
@@ -88,7 +101,9 @@ interface VentoStackApp {
   use(item: Middleware | Router | Plugin): VentoStackApp;
   listen(port?: number): Promise<void>;
   close(): Promise<void>;
+  addUrl(label: string, path: string): void;
   readonly router: Router;
   readonly lifecycle: Lifecycle;
+  readonly urls: ReadonlyArray<AppUrl>;
 }
 ```

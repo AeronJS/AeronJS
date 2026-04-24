@@ -83,6 +83,8 @@ export function createApp(config?: AppConfig): VentoStackApp {
   let activeRequests = 0;
   let isClosing = false;
   let sigTermHandler: (() => void) | null = null;
+  let sigIntHandler: (() => void) | null = null;
+  let shutdownPromise: Promise<void> | null = null;
 
   /**
    * 默认错误处理函数
@@ -153,6 +155,18 @@ export function createApp(config?: AppConfig): VentoStackApp {
     };
   }
 
+  function beginSignalShutdown(exitCode: number): void {
+    shutdownPromise ??= app.close().then(
+      () => {
+        process.exit(exitCode);
+      },
+      (error) => {
+        console.error("Failed to shut down gracefully:", error);
+        process.exit(1);
+      },
+    );
+  }
+
   const app: VentoStackApp = {
     router,
     lifecycle,
@@ -213,11 +227,15 @@ export function createApp(config?: AppConfig): VentoStackApp {
       }
       console.log();
 
-      // SIGTERM 优雅关闭
+      // SIGTERM / SIGINT 优雅关闭
       sigTermHandler = () => {
-        app.close();
+        beginSignalShutdown(0);
+      };
+      sigIntHandler = () => {
+        beginSignalShutdown(0);
       };
       process.on("SIGTERM", sigTermHandler);
+      process.on("SIGINT", sigIntHandler);
 
       await lifecycle.runAfterStart();
     },
@@ -237,10 +255,15 @@ export function createApp(config?: AppConfig): VentoStackApp {
       server.stop(true);
       server = null;
       isClosing = false;
+      shutdownPromise = null;
 
       if (sigTermHandler) {
         process.removeListener("SIGTERM", sigTermHandler);
         sigTermHandler = null;
+      }
+      if (sigIntHandler) {
+        process.removeListener("SIGINT", sigIntHandler);
+        sigIntHandler = null;
       }
     },
   };

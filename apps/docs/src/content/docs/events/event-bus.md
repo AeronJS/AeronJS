@@ -3,7 +3,7 @@ title: 事件总线
 description: 使用 createEventBus 和 defineEvent 实现类型安全的事件驱动架构
 ---
 
-`@ventostack/events` 提供了类型安全的事件总线，支持同步和异步事件处理、事件过滤和事件中间件。
+`@ventostack/events` 提供了类型安全的事件总线，支持同步和异步事件处理、有序执行与快照迭代保护。
 
 ## 定义事件
 
@@ -43,8 +43,8 @@ const bus = createEventBus();
 ## 发布事件
 
 ```typescript
-// 发布事件（TypeScript 会推断 payload 类型）
-await bus.publish(UserRegistered, {
+// 触发事件（TypeScript 会推断 payload 类型）
+await bus.emit(UserRegistered, {
   userId: "user_123",
   email: "alice@example.com",
   registeredAt: new Date(),
@@ -55,18 +55,18 @@ await bus.publish(UserRegistered, {
 
 ```typescript
 // 订阅事件（handler 的参数类型自动推断）
-bus.subscribe(UserRegistered, async (payload) => {
+bus.on(UserRegistered, async (payload) => {
   // payload.userId, payload.email, payload.registeredAt 都有类型
   await sendWelcomeEmail(payload.email);
   console.log(`新用户注册: ${payload.email}`);
 });
 
 // 多个订阅者
-bus.subscribe(UserRegistered, async (payload) => {
+bus.on(UserRegistered, async (payload) => {
   await analytics.track("user_registered", { userId: payload.userId });
 });
 
-bus.subscribe(OrderPlaced, async (payload) => {
+bus.on(OrderPlaced, async (payload) => {
   await inventory.reserve(payload.items);
   await notification.send(payload.userId, "订单已确认");
 });
@@ -78,21 +78,21 @@ bus.subscribe(OrderPlaced, async (payload) => {
 const bus = createEventBus();
 
 // 注册订阅（应用启动时）
-bus.subscribe(UserRegistered, async (payload) => {
+bus.on(UserRegistered, async (payload) => {
   await emailService.sendWelcome(payload.email);
 });
 
-bus.subscribe(OrderPlaced, async (payload) => {
+bus.on(OrderPlaced, async (payload) => {
   await fulfillmentService.process(payload.orderId);
 });
 
 // 在路由处理程序中发布
 router.post("/users", async (ctx) => {
-  const body = await ctx.body<{ email: string; name: string }>();
+  const body = await ctx.request.json();
   const user = await createUser(body);
 
   // 发布事件，异步处理不阻塞响应
-  await bus.publish(UserRegistered, {
+  await bus.emit(UserRegistered, {
     userId: user.id,
     email: user.email,
     registeredAt: new Date(),
@@ -105,7 +105,7 @@ router.post("/users", async (ctx) => {
 ## 取消订阅
 
 ```typescript
-const unsubscribe = bus.subscribe(UserRegistered, handler);
+const unsubscribe = bus.on(UserRegistered, handler);
 
 // 之后取消订阅
 unsubscribe();
@@ -120,12 +120,35 @@ bus.once(UserRegistered, async (payload) => {
 });
 ```
 
+## 移除事件处理器
+
+```typescript
+// 移除指定事件的某个处理器
+bus.off(UserRegistered, handler);
+
+// 移除指定事件的所有处理器
+bus.off(UserRegistered);
+
+// 移除所有事件的所有处理器
+bus.removeAll();
+```
+
+## 获取监听器数量
+
+```typescript
+const count = bus.listenerCount(UserRegistered);
+console.log(`user.registered 有 ${count} 个处理器`);
+```
+
 ## EventBus 接口
 
 ```typescript
 interface EventBus {
-  publish<T>(event: EventDefinition<T>, payload: T): Promise<void>;
-  subscribe<T>(event: EventDefinition<T>, handler: (payload: T) => void | Promise<void>): () => void;
-  once<T>(event: EventDefinition<T>, handler: (payload: T) => void | Promise<void>): void;
+  on<T>(event: EventDefinition<T>, handler: EventHandler<T>): () => void;
+  once<T>(event: EventDefinition<T>, handler: EventHandler<T>): () => void;
+  emit<T>(event: EventDefinition<T>, payload: T): Promise<void>;
+  off<T>(event: EventDefinition<T>, handler?: EventHandler<T>): void;
+  removeAll(): void;
+  listenerCount(event: EventDefinition<unknown>): number;
 }
 ```

@@ -1,6 +1,6 @@
 ---
 title: 配置管理
-description: 使用 createConfig 和 loadConfig 管理应用配置，支持环境变量、YAML 文件和 12-Factor 规范
+description: 使用 createConfig 和 loadConfig 管理应用配置，支持环境变量、JSON 文件和 12-Factor 规范
 ---
 
 VentoStack 提供了多种配置管理方式，从简单的环境变量读取到完整的 12-Factor 配置系统。
@@ -65,6 +65,7 @@ type ConfigFieldDef = {
   default?: string | number | boolean; // 默认值（类型必须与 type 一致）
   required?: boolean;        // 是否必填（无默认值时）
   sensitive?: boolean;       // 敏感字段（日志中脱敏）
+  secret?: boolean;          // 是否为密钥（需加密存储）
   options?: readonly string[] | readonly number[] | readonly boolean[]; // 允许取值范围
 };
 ```
@@ -73,6 +74,26 @@ type ConfigFieldDef = {
 - 设置了 `default` 或 `required: true` 的字段，类型中**不含** `undefined`
 - 未设置 `default` 且 `required` 为 `false` 的字段，类型中**包含** `undefined`
 - 设置了 `options` 的字段，类型自动推导为 `options` 的 **union 类型**（如 `"debug" | "info" | "error"`）
+
+## 嵌套 Schema
+
+Schema 支持嵌套结构：
+
+```typescript
+const config = createConfig({
+  server: {
+    port: { type: "number", default: 3000 },
+    host: { type: "string", default: "0.0.0.0" },
+  },
+  database: {
+    url: { type: "string", required: true },
+    pool: { type: "number", default: 10 },
+  },
+}, process.env);
+
+// config.server.port → number
+// config.database.url → string
+```
 
 ## 分环境配置文件
 
@@ -88,7 +109,8 @@ const config = await loadConfig(
     databaseUrl: { type: "string", required: true },
   },
   {
-    dir: "./config",  // 配置文件目录
+    basePath: "./config",  // 配置文件目录
+    env: "development",    // 当前环境名
   }
 );
 ```
@@ -238,6 +260,7 @@ if (warnings.length > 0) {
 // config.port, config.env, config.logLevel, config.databaseUrl ...
 ```
 
+
 ## CLI 参数解析
 
 使用 `parseArgs` 解析命令行参数：
@@ -321,3 +344,12 @@ console.log("当前配置:", sanitized); // 安全输出
 - `config.jwtSecret` 直接读取时仍然是原值，方便业务逻辑使用
 - 如果你要写日志，优先打印整个配置对象，或者先用 `safeConfig(config)`
 - `safeConfig(config)` 更适合配置对象，`sanitizeConfig` 更适合你自己额外组装的普通对象
+
+## 相关模块
+
+以下配置相关模块也存在于 `@ventostack/core` 中，但由独立文档页面覆盖：
+
+- **YAML 配置** — `parseYAML`、`stringifyYAML`、`loadYAMLConfig`（见 [YAML 配置](/docs/core/yaml-config)）
+- **配置热更新** — `createConfigWatcher`（见 [配置热重载](/docs/core/config-watch)）
+- **配置加密** — `createConfigEncryptor`（见 [配置加密](/docs/core/config-encryption)）
+- **12-Factor 配置** — `loadTwelveFactorConfig`、`validateEnvVars`（见 [12-Factor 配置](/docs/core/twelve-factor)）

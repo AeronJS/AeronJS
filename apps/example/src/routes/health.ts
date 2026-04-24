@@ -2,6 +2,10 @@ import type { Router } from "@ventostack/core";
 import type { HealthCheck } from "@ventostack/observability";
 
 export function registerHealthRoutes(router: Router, health: HealthCheck): void {
+  router.get("/health", (ctx) => {
+    return ctx.json(health.live());
+  });
+
   router.get("/health/live", (ctx) => {
     return ctx.json(health.live());
   });

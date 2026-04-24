@@ -3,7 +3,7 @@ title: 查询构建器
 description: 使用 defineModel 和 db.query 构建完全类型安全的 SQL 查询
 ---
 
-VentoStack 的查询构建器基于模型定义自动推导 TypeScript 类型，从 `db.query(Model).get()` 到返回结果的每一个字段都有完整类型提示。
+VentoStack 的查询构建器基于模型定义自动推导 TypeScript 类型，从 `db.query(Model).list()` 到返回结果的每一个字段都有完整类型提示。
 
 ## 定义模型
 
@@ -100,6 +100,12 @@ const selected = await db.query(UserModel).where("id", "IN", [1, 2, 3]).list();
 
 // IS NULL
 const unaged = await db.query(UserModel).where("age", "IS NULL").list();
+
+// OR 条件
+const result = await db.query(UserModel)
+  .where("role", "=", "admin")
+  .orWhere("active", "=", false)
+  .list();
 ```
 
 ## 排序和分页
@@ -122,6 +128,10 @@ const total = await db.query(UserModel).where("active", "=", true).count();
 
 const avgAge = await db.query(UserModel).where("age", "IS NOT NULL").avg("age");
 // avgAge: number
+
+const sumAge = await db.query(UserModel).sum("age");
+const minAge = await db.query(UserModel).min("age");
+const maxAge = await db.query(UserModel).max("age");
 ```
 
 ## INSERT
@@ -157,6 +167,37 @@ await db.query(UserModel).where("id", "=", 1).delete();
 
 // 恢复软删除记录
 await db.query(UserModel).where("id", "=", 1).restore();
+```
+
+## 批量插入
+
+```typescript
+await db.query(UserModel).batchInsert([
+  { email: "a@b.com", name: "A", role: "user" },
+  { email: "c@d.com", name: "B", role: "admin" },
+]);
+```
+
+## 分组与过滤
+
+```typescript
+const result = await db
+  .query(UserModel)
+  .select("role", "COUNT(*) as count")
+  .groupBy("role")
+  .having("count", ">", 5)
+  .list();
+```
+
+## 乐观锁
+
+```typescript
+const updated = await db
+  .query(UserModel)
+  .where("id", "=", 1)
+  .withVersion("version", 3)
+  .update({ name: "Alice" }, { returning: true });
+// 自动在 SET 中追加 version = version + 1，在 WHERE 中校验 version = 3
 ```
 
 ## 事务

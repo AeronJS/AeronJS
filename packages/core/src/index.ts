@@ -48,7 +48,6 @@ export {
 } from "./errors";
 
 // ========== 生命周期管理 ==========
-export { createLifecycle } from "./lifecycle";
 export type { LifecycleHook, Lifecycle } from "./lifecycle";
 
 // ========== 插件接口 ==========
@@ -84,10 +83,12 @@ export type {
 } from "./circuit-breaker";
 
 // ========== 限流中间件 ==========
-export { rateLimit, createMemoryRateLimitStore } from "./middlewares/rate-limit";
+export { rateLimit, createMemoryRateLimitStore, createRedisRateLimitStore } from "./middlewares/rate-limit";
 export type {
   RateLimitOptions,
   RateLimitStore,
+  RedisClientLike,
+  RedisRateLimitStoreOptions,
 } from "./middlewares/rate-limit";
 
 // ========== 超时中间件 ==========

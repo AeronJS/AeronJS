@@ -26,14 +26,19 @@ export type { JWTAlgorithm, JWTPayload, JWTOptions, JWTManager, JWTConfig } from
 export { createPasswordHasher } from "./password";
 export type { PasswordHasher, PasswordHasherOptions } from "./password";
 
-/** Session 管理 - 支持内存存储与自定义 Store */
+/** Session 管理 - 支持内存存储、Redis 存储与自定义 Store */
 export { createSessionManager, createMemorySessionStore } from "./session";
+export { createRedisSessionStore } from "./redis-session-store";
 export type {
   Session,
   SessionOptions,
   SessionStore,
   SessionManager,
 } from "./session";
+export type {
+  RedisSessionClientLike,
+  RedisSessionStoreOptions,
+} from "./redis-session-store";
 
 /** API Key 管理 - 生成、哈希与恒定时间验证 */
 export { createApiKeyManager } from "./api-key";

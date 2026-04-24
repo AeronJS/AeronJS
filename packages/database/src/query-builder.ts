@@ -6,6 +6,42 @@
 
 import type { ModelDefinition } from "./model";
 
+/** 默认最大 limit 值 */
+const DEFAULT_MAX_LIMIT = 1000;
+
+/** 合法的 SQL 标识符正则 */
+const VALID_IDENTIFIER_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+/**
+ * 验证字段名是否合法，不合法则抛出 TypeError。
+ */
+function assertValidIdentifier(name: string, context: string): void {
+  if (!VALID_IDENTIFIER_RE.test(name)) {
+    throw new TypeError(
+      `Invalid SQL identifier in ${context}: "${name}". Identifiers must match /^[a-zA-Z_][a-zA-Z0-9_]*$/`,
+    );
+  }
+}
+
+/**
+ * 验证 limit / offset 数值。
+ */
+function assertValidLimit(n: number, maxLimit: number): void {
+  if (!Number.isFinite(n) || Number.isNaN(n) || !Number.isInteger(n) || n < 0 || n > maxLimit) {
+    throw new RangeError(
+      `limit must be a non-negative integer <= ${maxLimit}, got ${n}`,
+    );
+  }
+}
+
+function assertValidOffset(n: number): void {
+  if (!Number.isFinite(n) || Number.isNaN(n) || !Number.isInteger(n) || n < 0) {
+    throw new RangeError(
+      `offset must be a non-negative integer, got ${n}`,
+    );
+  }
+}
+
 /**
  * WHERE 条件单元。
  */
@@ -40,6 +76,8 @@ export interface HavingCondition {
   op: string;
   /** 比较值 */
   value: unknown;
+  /** 与前一条件的连接方式（AND / OR） */
+  connector?: "AND" | "OR";
 }
 
 /**
@@ -77,22 +115,30 @@ export interface QueryBuilder<T = unknown> {
   limit(n: number): QueryBuilder<T>;
   /** 跳过前 n 条 */
   offset(n: number): QueryBuilder<T>;
+  /** 清除 limit 限制 */
+  clearLimit(): QueryBuilder<T>;
+  /** 清除 offset 跳过 */
+  clearOffset(): QueryBuilder<T>;
+  /** 是否已设置 limit */
+  hasLimit(): boolean;
   /** 选择返回字段（传入空数组则 SELECT *） */
-  select(...fields: string[]): QueryBuilder<T>;
+  select<K extends keyof T>(...fields: K[]): QueryBuilder<T>;
 
   // 分组与过滤
   /** 按字段分组 */
   groupBy(...fields: (keyof T)[]): QueryBuilder<T>;
   /** 对分组结果添加 HAVING 条件 */
   having(field: keyof T, op: string, value: unknown): QueryBuilder<T>;
+  /** 对分组结果添加 OR HAVING 条件 */
+  orHaving(field: keyof T, op: string, value: unknown): QueryBuilder<T>;
 
   // 批量插入
   /**
    * 批量插入数据。
    * @param rows — 待插入的行数据数组
-   * @param fields — 要插入的字段列表
+   * @param fields — 要插入的字段列表（可选，默认取第一行对象的键）
    */
-  batchInsert(rows: Record<string, unknown>[], fields: string[]): QueryBuilder<T>;
+  batchInsert(rows: Record<string, unknown>[], fields?: string[]): QueryBuilder<T>;
 
   // 乐观锁
   /**
@@ -164,6 +210,8 @@ interface QueryState {
   isRestore: boolean;
   /** 查询时是否包含已删除行 */
   includeDeleted: boolean;
+  /** 最大 limit 值 */
+  maxLimit: number;
 }
 
 /**
@@ -192,7 +240,74 @@ function cloneState(state: QueryState): QueryState {
     isHardDelete: state.isHardDelete,
     isRestore: state.isRestore,
     includeDeleted: state.includeDeleted,
+    maxLimit: state.maxLimit,
   };
+}
+
+/**
+ * 将条件列表按 connector 分组，对包含 OR 的组包裹括号。
+ */
+function buildConditionGroup(
+  conditions: Array<{ field: string; op: string; value?: unknown; connector?: "AND" | "OR" }>,
+  startParamIndex: number,
+  paramPusher: (v: unknown) => void,
+): { text: string; nextParamIndex: number } {
+  const pushParams = (...vals: unknown[]) => {
+    for (const v of vals) paramPusher(v);
+  };
+  let paramIndex = startParamIndex;
+  if (conditions.length === 0) {
+    return { text: "", nextParamIndex: paramIndex };
+  }
+
+  // 按 AND 切分，OR 条件归入同一组
+  const groups: Array<{ items: typeof conditions; hasOr: boolean }> = [];
+  let currentGroup: typeof conditions = [conditions[0]!];
+  let currentHasOr = false;
+
+  for (let i = 1; i < conditions.length; i++) {
+    const cond = conditions[i]!;
+    if (cond.connector === "OR") {
+      currentHasOr = true;
+      currentGroup.push(cond);
+    } else {
+      groups.push({ items: currentGroup, hasOr: currentHasOr });
+      currentGroup = [cond];
+      currentHasOr = false;
+    }
+  }
+  groups.push({ items: currentGroup, hasOr: currentHasOr });
+
+  const groupTexts: string[] = [];
+  for (const group of groups) {
+    const parts: string[] = [];
+    for (let i = 0; i < group.items.length; i++) {
+      const item = group.items[i]!;
+      let expr: string;
+      if (item.op === "IS NULL") {
+        expr = `${item.field} IS NULL`;
+      } else if (item.op === "IS NOT NULL") {
+        expr = `${item.field} IS NOT NULL`;
+      } else if (item.op === "IN") {
+        const values = item.value as unknown[];
+        const placeholders = values.map(() => `$${paramIndex++}`);
+        pushParams(...values);
+        expr = `${item.field} IN (${placeholders.join(", ")})`;
+      } else {
+        expr = `${item.field} ${item.op} $${paramIndex++}`;
+        pushParams(item.value);
+      }
+      if (i === 0) {
+        parts.push(expr);
+      } else {
+        parts.push(`OR ${expr}`);
+      }
+    }
+    const joined = parts.join(" ");
+    groupTexts.push(group.hasOr ? `(${joined})` : joined);
+  }
+
+  return { text: groupTexts.join(" AND "), nextParamIndex: paramIndex };
 }
 
 /**
@@ -210,7 +325,6 @@ function buildWhereClause(
   startParamIndex: number,
 ): { clause: string; params: unknown[]; nextParamIndex: number } {
   const params: unknown[] = [];
-  let paramIndex = startParamIndex;
 
   const allWheres = [...wheres];
   if (isSoftDelete && !includeDeleted) {
@@ -218,35 +332,16 @@ function buildWhereClause(
   }
 
   if (allWheres.length === 0) {
-    return { clause: "", params, nextParamIndex: paramIndex };
+    return { clause: "", params, nextParamIndex: startParamIndex };
   }
 
-  const parts: string[] = [];
-  for (let i = 0; i < allWheres.length; i++) {
-    const w = allWheres[i]!;
-    let expr: string;
-    if (w.op === "IS NULL") {
-      expr = `${w.field} IS NULL`;
-    } else if (w.op === "IS NOT NULL") {
-      expr = `${w.field} IS NOT NULL`;
-    } else if (w.op === "IN") {
-      const values = w.value as unknown[];
-      const placeholders = values.map(() => `$${paramIndex++}`);
-      params.push(...values);
-      expr = `${w.field} IN (${placeholders.join(", ")})`;
-    } else {
-      expr = `${w.field} ${w.op} $${paramIndex++}`;
-      params.push(w.value);
-    }
+  const { text, nextParamIndex } = buildConditionGroup(
+    allWheres,
+    startParamIndex,
+    (...vals) => params.push(...vals),
+  );
 
-    if (i === 0) {
-      parts.push(expr);
-    } else {
-      parts.push(`${w.connector} ${expr}`);
-    }
-  }
-
-  return { clause: ` WHERE ${parts.join(" ")}`, params, nextParamIndex: paramIndex };
+  return { clause: ` WHERE ${text}`, params, nextParamIndex };
 }
 
 /**
@@ -260,7 +355,6 @@ function buildGroupByHaving(
   startParamIndex: number,
 ): { clause: string; params: unknown[]; nextParamIndex: number } {
   const params: unknown[] = [];
-  let paramIndex = startParamIndex;
   let clause = "";
 
   if (state.groupByFields.length > 0) {
@@ -268,15 +362,16 @@ function buildGroupByHaving(
   }
 
   if (state.havings.length > 0) {
-    const havingParts: string[] = [];
-    for (const h of state.havings) {
-      havingParts.push(`${h.field} ${h.op} $${paramIndex++}`);
-      params.push(h.value);
-    }
-    clause += ` HAVING ${havingParts.join(" AND ")}`;
+    const { text, nextParamIndex } = buildConditionGroup(
+      state.havings,
+      startParamIndex,
+      (...vals) => params.push(...vals),
+    );
+    clause += ` HAVING ${text}`;
+    return { clause, params, nextParamIndex };
   }
 
-  return { clause, params, nextParamIndex: paramIndex };
+  return { clause, params, nextParamIndex: startParamIndex };
 }
 
 /**
@@ -333,7 +428,7 @@ function buildSelectSQL(tableName: string, state: QueryState): { text: string; p
  */
 function buildInsertSQL(tableName: string, state: QueryState): { text: string; params: unknown[] } {
   // 批量插入
-  if (state.batchInsertRows && state.batchInsertFields) {
+  if (state.batchInsertRows && state.batchInsertRows.length > 0 && state.batchInsertFields) {
     const fields = state.batchInsertFields;
     const rows = state.batchInsertRows;
     const params: unknown[] = [];
@@ -355,8 +450,8 @@ function buildInsertSQL(tableName: string, state: QueryState): { text: string; p
 
   // 单行插入
   const data = state.insertValues;
-  if (!data) {
-    return { text: "", params: [] };
+  if (!data || Object.keys(data).length === 0) {
+    throw new TypeError("INSERT operation requires insert data. Call insertData() or batchInsert() before toSQL().");
   }
 
   const keys = Object.keys(data);
@@ -381,8 +476,8 @@ function buildInsertSQL(tableName: string, state: QueryState): { text: string; p
  */
 function buildUpdateSQL(tableName: string, state: QueryState): { text: string; params: unknown[] } {
   const data = state.updateValues;
-  if (!data) {
-    return { text: "", params: [] };
+  if (!data || Object.keys(data).length === 0) {
+    throw new TypeError("UPDATE operation requires update data. Call updateData() before toSQL().");
   }
 
   const params: unknown[] = [];
@@ -491,42 +586,72 @@ function buildDeleteSQL(tableName: string, state: QueryState): { text: string; p
 function createBuilder<T>(tableName: string, state: QueryState): QueryBuilder<T> {
   return {
     where(field: keyof T, op: WhereOp, value?: unknown): QueryBuilder<T> {
+      assertValidIdentifier(field as string, "where");
+      if (op === "IN" && Array.isArray(value) && value.length === 0) {
+        throw new TypeError("IN clause requires a non-empty array");
+      }
       const next = cloneState(state);
       next.wheres.push({ field: field as string, op, value, connector: "AND" });
       return createBuilder<T>(tableName, next);
     },
 
     orWhere(field: keyof T, op: WhereOp, value?: unknown): QueryBuilder<T> {
+      assertValidIdentifier(field as string, "orWhere");
+      if (op === "IN" && Array.isArray(value) && value.length === 0) {
+        throw new TypeError("IN clause requires a non-empty array");
+      }
       const next = cloneState(state);
       next.wheres.push({ field: field as string, op, value, connector: "OR" });
       return createBuilder<T>(tableName, next);
     },
 
     orderBy(field: keyof T, direction: "asc" | "desc" = "asc"): QueryBuilder<T> {
+      assertValidIdentifier(field as string, "orderBy");
       const next = cloneState(state);
       next.orders.push({ field: field as string, direction });
       return createBuilder<T>(tableName, next);
     },
 
     limit(n: number): QueryBuilder<T> {
+      assertValidLimit(n, state.maxLimit);
       const next = cloneState(state);
       next.limitVal = n;
       return createBuilder<T>(tableName, next);
     },
 
     offset(n: number): QueryBuilder<T> {
+      assertValidOffset(n);
       const next = cloneState(state);
       next.offsetVal = n;
       return createBuilder<T>(tableName, next);
     },
 
-    select(...fields: string[]): QueryBuilder<T> {
+    clearLimit(): QueryBuilder<T> {
       const next = cloneState(state);
-      next.fields = fields;
+      next.limitVal = undefined;
+      return createBuilder<T>(tableName, next);
+    },
+
+    clearOffset(): QueryBuilder<T> {
+      const next = cloneState(state);
+      next.offsetVal = undefined;
+      return createBuilder<T>(tableName, next);
+    },
+
+    hasLimit(): boolean {
+      return state.limitVal !== undefined;
+    },
+
+    select<K extends keyof T>(...fields: K[]): QueryBuilder<T> {
+      const next = cloneState(state);
+      next.fields = fields as string[];
       return createBuilder<T>(tableName, next);
     },
 
     groupBy(...fields: (keyof T)[]): QueryBuilder<T> {
+      for (const f of fields) {
+        assertValidIdentifier(f as string, "groupBy");
+      }
       const next = cloneState(state);
       next.groupByFields = fields as string[];
       return createBuilder<T>(tableName, next);
@@ -534,19 +659,33 @@ function createBuilder<T>(tableName: string, state: QueryState): QueryBuilder<T>
 
     having(field: keyof T, op: string, value: unknown): QueryBuilder<T> {
       const next = cloneState(state);
-      next.havings.push({ field: field as string, op, value });
+      next.havings.push({ field: field as string, op, value, connector: "AND" });
       return createBuilder<T>(tableName, next);
     },
 
-    batchInsert(rows: Record<string, unknown>[], fields: string[]): QueryBuilder<T> {
+    orHaving(field: keyof T, op: string, value: unknown): QueryBuilder<T> {
+      const next = cloneState(state);
+      next.havings.push({ field: field as string, op, value, connector: "OR" });
+      return createBuilder<T>(tableName, next);
+    },
+
+    batchInsert(rows: Record<string, unknown>[], fields?: string[]): QueryBuilder<T> {
+      if (rows.length === 0) {
+        throw new TypeError("batchInsert requires at least one row");
+      }
+      const resolvedFields = fields && fields.length > 0 ? fields : Object.keys(rows[0] ?? {});
+      for (const f of resolvedFields) {
+        assertValidIdentifier(f, "batchInsert");
+      }
       const next = cloneState(state);
       next.operation = "insert";
       next.batchInsertRows = rows;
-      next.batchInsertFields = fields;
+      next.batchInsertFields = resolvedFields;
       return createBuilder<T>(tableName, next);
     },
 
     withVersion(field: keyof T, currentVersion: number): QueryBuilder<T> {
+      assertValidIdentifier(field as string, "withVersion");
       const next = cloneState(state);
       next.versionClause = { field: field as string, currentVersion };
       return createBuilder<T>(tableName, next);
@@ -615,9 +754,13 @@ function createBuilder<T>(tableName: string, state: QueryState): QueryBuilder<T>
  * 基于模型定义创建初始查询构建器。
  * @template T — 模型行类型
  * @param model — 模型定义
+ * @param options — 可选配置
  * @returns 初始 QueryBuilder 实例（默认 select 操作）
  */
-export function createQueryBuilder<T = unknown>(model: ModelDefinition<T>): QueryBuilder<T> {
+export function createQueryBuilder<T = unknown>(
+  model: ModelDefinition<T>,
+  options?: { maxLimit?: number },
+): QueryBuilder<T> {
   const state: QueryState = {
     operation: "select",
     fields: [],
@@ -636,6 +779,7 @@ export function createQueryBuilder<T = unknown>(model: ModelDefinition<T>): Quer
     isHardDelete: false,
     isRestore: false,
     includeDeleted: false,
+    maxLimit: options?.maxLimit ?? DEFAULT_MAX_LIMIT,
   };
 
   return createBuilder<T>(model.tableName, state);

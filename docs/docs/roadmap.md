@@ -16,7 +16,7 @@
 - [x] 请求上下文（`Context`）
 - [x] 错误处理（`VentoStackError`、`NotFoundError` 等）
 - [x] 配置管理（`createConfig`、`loadConfig`、YAML 支持）
-- [x] 生命周期钩子（`createLifecycle`）
+- [x] 生命周期钩子（`app.lifecycle`）
 - [x] 健康检查（`createHealthCheck`）
 - [x] 限流（`createRateLimiter`）
 - [x] 缓存控制头（`createCacheControl`）

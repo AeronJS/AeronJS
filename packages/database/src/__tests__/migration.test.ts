@@ -141,6 +141,65 @@ describe("MigrationRunner.up", () => {
 
     expect(executedQueries[0]!.text).toContain("CREATE TABLE IF NOT EXISTS __migrations");
   });
+
+  test("rolls back and does not insert record when migration.up fails", async () => {
+    const { executor, migrationRecords } = createMockExecutor();
+    const runner = createMigrationRunner(executor);
+
+    const failingMigration: Migration = {
+      name: "001_fail",
+      up: mock(async () => {
+        throw new Error("up failed");
+      }),
+      down: mock(async () => {}),
+    };
+
+    runner.addMigration(failingMigration);
+
+    await expect(runner.up()).rejects.toThrow("up failed");
+    expect(migrationRecords).toHaveLength(0);
+  });
+
+  test("returns empty array with empty migration list", async () => {
+    const { executor } = createMockExecutor();
+    const runner = createMigrationRunner(executor);
+    const executed = await runner.up();
+    expect(executed).toEqual([]);
+  });
+
+  test("triggers rollback when executor fails during up", async () => {
+    const { executor, executedQueries } = createMockExecutor();
+    const runner = createMigrationRunner(executor);
+
+    const failingMigration: Migration = {
+      name: "001_fail",
+      up: mock(async (exec) => {
+        await exec("SOME BAD SQL");
+      }),
+      down: mock(async () => {}),
+    };
+
+    runner.addMigration(failingMigration);
+
+    // Override default mock behavior to throw on this specific SQL
+    executor.mockImplementation(async (text: string, params?: unknown[]) => {
+      executedQueries.push({ text, params });
+      if (text === "SOME BAD SQL") {
+        throw new Error("SQL error");
+      }
+      // Fall back to original behavior for other queries
+      if (text.startsWith("CREATE TABLE")) return [];
+      if (text.includes("SELECT name, executed_at FROM __migrations")) return [];
+      if (text.includes("INSERT INTO __migrations")) return [];
+      if (text.includes("DELETE FROM __migrations")) return [];
+      if (text === "BEGIN" || text === "COMMIT" || text === "ROLLBACK") return [];
+      return [];
+    });
+
+    await expect(runner.up()).rejects.toThrow("SQL error");
+    const rollbackIdx = executedQueries.findIndex((q) => q.text === "ROLLBACK");
+    expect(rollbackIdx).toBeGreaterThan(-1);
+  });
 });
 
 describe("MigrationRunner.down", () => {
@@ -201,6 +260,87 @@ describe("MigrationRunner.down", () => {
     // Migration record should be removed
     expect(migrationRecords).toHaveLength(0);
   });
+
+  test("throws RangeError when steps is 0", async () => {
+    const { executor } = createMockExecutor();
+    const runner = createMigrationRunner(executor);
+    await expect(runner.down(0)).rejects.toThrow(RangeError);
+    await expect(runner.down(0)).rejects.toThrow("steps must be a positive integer");
+  });
+
+  test("throws RangeError when steps is negative", async () => {
+    const { executor } = createMockExecutor();
+    const runner = createMigrationRunner(executor);
+    await expect(runner.down(-1)).rejects.toThrow(RangeError);
+    await expect(runner.down(-1)).rejects.toThrow("steps must be a positive integer");
+  });
+
+  test("throws when executed migration is no longer registered", async () => {
+    const { executor, migrationRecords } = createMockExecutor();
+    migrationRecords.push({ name: "001_create_users", executed_at: "2024-01-01T00:00:00Z" });
+
+    const runner = createMigrationRunner(executor);
+    // Intentionally not registering 001_create_users
+    runner.addMigration(createTestMigration("002_create_posts"));
+
+    await expect(runner.down()).rejects.toThrow(
+      "Migration 001_create_users was executed but is no longer registered",
+    );
+    // Record should NOT be removed
+    expect(migrationRecords).toHaveLength(1);
+  });
+
+  test("rolls back and does not delete record when migration.down fails", async () => {
+    const { executor, migrationRecords } = createMockExecutor();
+    migrationRecords.push({ name: "001_fail", executed_at: "2024-01-01T00:00:00Z" });
+
+    const runner = createMigrationRunner(executor);
+    const failingMigration: Migration = {
+      name: "001_fail",
+      up: mock(async () => {}),
+      down: mock(async () => {
+        throw new Error("down failed");
+      }),
+    };
+    runner.addMigration(failingMigration);
+
+    await expect(runner.down()).rejects.toThrow("down failed");
+    expect(migrationRecords).toHaveLength(1);
+  });
+
+  test("triggers rollback when executor fails during down", async () => {
+    const { executor, executedQueries, migrationRecords } = createMockExecutor();
+    migrationRecords.push({ name: "001_fail", executed_at: "2024-01-01T00:00:00Z" });
+
+    const runner = createMigrationRunner(executor);
+    const failingMigration: Migration = {
+      name: "001_fail",
+      up: mock(async () => {}),
+      down: mock(async (exec) => {
+        await exec("SOME BAD SQL");
+      }),
+    };
+    runner.addMigration(failingMigration);
+
+    executor.mockImplementation(async (text: string, params?: unknown[]) => {
+      executedQueries.push({ text, params });
+      if (text === "SOME BAD SQL") {
+        throw new Error("SQL error");
+      }
+      if (text.startsWith("CREATE TABLE")) return [];
+      if (text.includes("SELECT name, executed_at FROM __migrations")) {
+        return [...migrationRecords];
+      }
+      if (text.includes("INSERT INTO __migrations")) return [];
+      if (text.includes("DELETE FROM __migrations")) return [];
+      if (text === "BEGIN" || text === "COMMIT" || text === "ROLLBACK") return [];
+      return [];
+    });
+
+    await expect(runner.down()).rejects.toThrow("SQL error");
+    const rollbackIdx = executedQueries.findIndex((q) => q.text === "ROLLBACK");
+    expect(rollbackIdx).toBeGreaterThan(-1);
+  });
 });
 
 describe("MigrationRunner.status", () => {
@@ -245,5 +385,24 @@ describe("MigrationRunner.status", () => {
 
     expect(statuses).toHaveLength(1);
     expect(statuses[0]!.executedAt).toBeNull();
+  });
+
+  test("returns empty array with zero migrations", async () => {
+    const { executor } = createMockExecutor();
+    const runner = createMigrationRunner(executor);
+    const statuses = await runner.status();
+    expect(statuses).toEqual([]);
+  });
+});
+
+describe("MigrationRunner.addMigration", () => {
+  test("throws on duplicate migration names", () => {
+    const { executor } = createMockExecutor();
+    const runner = createMigrationRunner(executor);
+    const m = createTestMigration("001_create_users");
+    runner.addMigration(m);
+    expect(() => runner.addMigration(createTestMigration("001_create_users"))).toThrow(
+      "Duplicate migration name: 001_create_users",
+    );
   });
 });

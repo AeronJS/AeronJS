@@ -1,107 +1,96 @@
 ---
 title: 生命周期
-description: 使用 createLifecycle 管理应用生命周期钩子
+description: 通过 app.lifecycle 管理应用启动、路由编译和关闭阶段的钩子
 ---
 
-`createLifecycle` 提供了完整的应用生命周期管理，支持启动、停止和各种阶段的钩子。
+`app.lifecycle` 用来管理应用生命周期钩子。当前实现包含 4 个阶段：
+
+- `onBeforeStart`：启动服务前执行
+- `onBeforeRouteCompile`：路由编译前执行
+- `onAfterStart`：服务启动后执行
+- `onBeforeStop`：服务关闭前执行
 
 ## 基本用法
 
-```typescript
-import { createLifecycle } from "@ventostack/core";
+`createApp()` 内部已经集成了 lifecycle。调用 `app.listen()` 和 `app.close()` 时，会按下面的顺序自动触发：
 
-const lifecycle = createLifecycle();
+1. `onBeforeStart`
+2. `onBeforeRouteCompile`
+3. 编译路由并启动服务
+4. `onAfterStart`
+5. `onBeforeStop`
 
-lifecycle.onStart(async () => {
-  console.log("应用正在启动...");
-  await db.connect();
-});
-
-lifecycle.onStop(async () => {
-  console.log("应用正在停止...");
-  await db.close();
-});
-
-// 触发启动
-await lifecycle.start();
-
-// 触发停止
-await lifecycle.stop();
-```
-
-## 与 createApp 集成
-
-`createApp` 内部使用 lifecycle，但你也可以手动使用：
+直接在 `app.lifecycle` 上注册钩子即可：
 
 ```typescript
-import { createApp, createLifecycle } from "@ventostack/core";
+import { createApp } from "@ventostack/core";
 
-const lifecycle = createLifecycle();
 const app = createApp({ port: 3000 });
 
-// 数据库连接
-lifecycle.onStart(async () => {
+app.lifecycle.onBeforeStart(async () => {
   await db.connect();
   console.log("数据库已连接");
 });
 
-// 缓存预热
-lifecycle.onStart(async () => {
-  await cache.warm();
-  console.log("缓存已预热");
+app.lifecycle.onBeforeRouteCompile(() => {
+  registerDynamicRoutes(app.router);
 });
 
-// 优雅停机
-lifecycle.onStop(async () => {
+app.lifecycle.onAfterStart(() => {
+  console.log("服务已启动");
+});
+
+app.lifecycle.onBeforeStop(async () => {
   await db.close();
-  await cache.close();
-  console.log("所有连接已关闭");
+  console.log("数据库连接已关闭");
 });
 
-await lifecycle.start();
 await app.listen();
 
-// 处理系统信号
 process.on("SIGTERM", async () => {
-  await lifecycle.stop();
+  await app.close();
   process.exit(0);
 });
 ```
 
-## 多个生命周期钩子
+## 多个钩子与执行顺序
 
-可以注册多个同类型的钩子，按注册顺序执行：
+同一阶段可以注册多个钩子。
+
+- `onBeforeStart`、`onAfterStart`、`onBeforeStop` 按注册顺序执行
+- `onBeforeRouteCompile` 按 `priority` 从小到大执行；优先级相同时，按注册顺序执行
 
 ```typescript
-const lifecycle = createLifecycle();
+const app = createApp();
 
-// 钩子 1
-lifecycle.onStart(async () => {
+app.lifecycle.onBeforeStart(async () => {
   await connectDatabase();
 });
 
-// 钩子 2（在钩子 1 之后执行）
-lifecycle.onStart(async () => {
-  await runMigrations();
+app.lifecycle.onBeforeStart(async () => {
+  await warmCache();
 });
 
-// 钩子 3（在钩子 2 之后执行）
-lifecycle.onStart(async () => {
-  await seedInitialData();
-});
+app.lifecycle.onBeforeRouteCompile(() => {
+  registerCoreRoutes();
+}, 0);
+
+app.lifecycle.onBeforeRouteCompile(() => {
+  registerPluginRoutes();
+}, 10);
 ```
 
 ## 错误处理
 
-如果启动钩子抛出错误，启动过程会终止：
+如果某个钩子抛出错误，对应阶段会立刻中断，错误会继续向外抛出：
 
 ```typescript
-lifecycle.onStart(async () => {
+app.lifecycle.onBeforeStart(async () => {
   try {
     await db.connect();
-  } catch (err) {
-    console.error("数据库连接失败:", err);
-    throw err; // 重新抛出，阻止启动
+  } catch (error) {
+    console.error("数据库连接失败:", error);
+    throw error;
   }
 });
 ```
@@ -110,9 +99,11 @@ lifecycle.onStart(async () => {
 
 ```typescript
 interface Lifecycle {
-  onStart(handler: () => void | Promise<void>): void;
-  onStop(handler: () => void | Promise<void>): void;
-  start(): Promise<void>;
-  stop(): Promise<void>;
+  onBeforeStart(handler: () => void | Promise<void>): void;
+  onAfterStart(handler: () => void | Promise<void>): void;
+  onBeforeRouteCompile(handler: () => void | Promise<void>, priority?: number): void;
+  onBeforeStop(handler: () => void | Promise<void>): void;
 }
 ```
+
+`runBeforeStart()`、`runBeforeRouteCompile()`、`runAfterStart()` 和 `runBeforeStop()` 是框架内部在 `createApp()` 中调用的执行方法，业务代码通常只需要注册钩子，不需要自己触发它们。

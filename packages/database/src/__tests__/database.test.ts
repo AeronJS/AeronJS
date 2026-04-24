@@ -135,6 +135,17 @@ describe("Database.query - get", () => {
 
     expect(user).toBeUndefined();
   });
+
+  test("get with pre-existing limit uses that limit", async () => {
+    const { executor } = createMockExecutor();
+    executor.mockResolvedValueOnce([{ id: 1, name: "Alice", email: "alice@test.com" }]);
+
+    const db = createDatabase({ executor });
+    const user = await db.query(UserModel).where("id", "=", 1).limit(5).get();
+
+    expect(user).toEqual({ id: 1, name: "Alice", email: "alice@test.com" });
+    expect(executor).toHaveBeenCalledWith("SELECT * FROM users WHERE id = $1 LIMIT $2", [1, 5]);
+  });
 });
 
 describe("Database.query - count", () => {
@@ -157,6 +168,17 @@ describe("Database.query - count", () => {
     const total = await db.query(UserModel).count();
 
     expect(total).toBe(0);
+  });
+
+  test("count strips limit and offset", async () => {
+    const { executor } = createMockExecutor();
+    executor.mockResolvedValueOnce([{ count: 5 }]);
+
+    const db = createDatabase({ executor });
+    const total = await db.query(UserModel).where("active", "=", true).limit(10).offset(5).count();
+
+    expect(total).toBe(5);
+    expect(executor).toHaveBeenCalledWith("SELECT COUNT(*) as count FROM users WHERE active = $1", [true]);
   });
 });
 
@@ -414,5 +436,29 @@ describe("Database.transaction - nested", () => {
       await tx.close(); // Should not throw or close real connection
       await tx.raw("SELECT 1");
     });
+  });
+
+  test("nested transaction savepoint names are unique", async () => {
+    const { executor } = createMockExecutor();
+    executor.mockResolvedValue([]);
+
+    const db = createDatabase({ executor });
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < 3; i++) {
+        await tx.transaction(async (innerTx) => {
+          await innerTx.raw("SELECT 1");
+        });
+      }
+    });
+
+    const calls = executor.mock.calls;
+    const savepointNames = new Set<string>();
+    for (const call of calls) {
+      const sql = call[0] as string;
+      if (sql.startsWith("SAVEPOINT ")) {
+        savepointNames.add(sql);
+      }
+    }
+    expect(savepointNames.size).toBe(3);
   });
 });

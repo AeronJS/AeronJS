@@ -19,6 +19,10 @@ export type { Cache, CacheOptions, CacheAdapter, TaggedCache } from "./cache";
 // 内存缓存适配器
 export { createMemoryAdapter } from "./memory-adapter";
 
+// Redis 缓存适配器
+export { createRedisAdapter } from "./redis-adapter";
+export type { RedisCacheClientLike, RedisAdapterOptions } from "./redis-adapter";
+
 // 分布式锁
 export { createLock } from "./lock";
 export type { Lock, LockOptions } from "./lock";

@@ -97,6 +97,92 @@ function defaultKeyFn(ctx: Context, trustProxyHeaders = false): string {
 }
 
 /**
+ * 最小 Redis 客户端接口，基于 Bun Redis 设计
+ */
+export interface RedisClientLike {
+  /** 执行 INCR 命令 */
+  incr(key: string): Promise<number>;
+  /** 执行 PEXPIRE 命令（毫秒） */
+  pexpire(key: string, milliseconds: number): Promise<void>;
+  /** 执行 PTTL 命令（毫秒），-1 表示无过期，-2 表示键不存在 */
+  pttl(key: string): Promise<number>;
+  /** 执行 DEL 命令 */
+  del(key: string): Promise<void>;
+}
+
+/** Redis 限流存储选项 */
+export interface RedisRateLimitStoreOptions {
+  /** Redis 客户端实例 */
+  client: RedisClientLike;
+  /** 键前缀，默认 "ratelimit:" */
+  keyPrefix?: string;
+}
+
+/**
+ * 创建 Redis 限流存储（支持分布式多实例）
+ *
+ * 使用原子 Lua 脚本保证 INCR + PEXPIRE 的一致性，避免 race condition。
+ *
+ * @example
+ * ```typescript
+ * import { createRedisRateLimitStore, rateLimit } from "@ventostack/core";
+ *
+ * const redis = new Bun.Redis("redis://localhost:6379");
+ * const store = createRedisRateLimitStore({ client: redis });
+ *
+ * app.use(rateLimit({
+ *   windowMs: 60_000,
+ *   max: 100,
+ *   store,
+ * }));
+ * ```
+ */
+export function createRedisRateLimitStore(options: RedisRateLimitStoreOptions): RateLimitStore {
+  const { client, keyPrefix = "ratelimit:" } = options;
+
+  // Lua 脚本：原子化 INCR + PEXPIRE
+  const luaScript = `
+    local current = redis.call('INCR', KEYS[1])
+    if current == 1 then
+      redis.call('PEXPIRE', KEYS[1], ARGV[1])
+    end
+    local ttl = redis.call('PTTL', KEYS[1])
+    return {current, ttl}
+  `;
+
+  return {
+    async increment(key: string, windowMs: number) {
+      const fullKey = `${keyPrefix}${key}`;
+      // 如果客户端支持 eval（Bun Redis），使用原子 Lua 脚本
+      if ("eval" in client && typeof (client as unknown as Record<string, unknown>).eval === "function") {
+        const result = await (client as unknown as { eval(script: string, keys: number, ...args: string[]): Promise<[number, number]> }).eval(
+          luaScript,
+          1,
+          fullKey,
+          String(windowMs),
+        );
+        const [count, ttlMs] = result;
+        const resetAt = Date.now() + ttlMs;
+        return { count, resetAt };
+      }
+
+      // 降级：分步执行（极小概率出现 race，绝大多数场景可接受）
+      const count = await client.incr(fullKey);
+      if (count === 1) {
+        await client.pexpire(fullKey, windowMs);
+      }
+      const ttlMs = await client.pttl(fullKey);
+      const resetAt = Date.now() + (ttlMs > 0 ? ttlMs : windowMs);
+      return { count, resetAt };
+    },
+
+    async reset(key: string) {
+      await client.del(`${keyPrefix}${key}`);
+    },
+  };
+}
+
+/**
  * 创建限流中间件
  * @param options - 限流配置选项
  * @returns Middleware 实例

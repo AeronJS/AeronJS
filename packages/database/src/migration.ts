@@ -16,12 +16,12 @@ export interface Migration {
    * 执行升级。
    * @param executor — SQL 执行器
    */
-  up: (executor: (text: string, params?: unknown[]) => Promise<unknown>) => Promise<void>;
+  up: (executor: SqlExecutor) => Promise<void>;
   /**
    * 执行回滚。
    * @param executor — SQL 执行器
    */
-  down: (executor: (text: string, params?: unknown[]) => Promise<unknown>) => Promise<void>;
+  down: (executor: SqlExecutor) => Promise<void>;
 }
 
 /**
@@ -99,6 +99,9 @@ export function createMigrationRunner(executor: SqlExecutor): MigrationRunner {
 
   return {
     addMigration(migration: Migration): void {
+      if (migrations.some((m) => m.name === migration.name)) {
+        throw new Error(`Duplicate migration name: ${migration.name}`);
+      }
       migrations.push(migration);
     },
 
@@ -113,12 +116,15 @@ export function createMigrationRunner(executor: SqlExecutor): MigrationRunner {
 
       const executedList: string[] = [];
       for (const migration of pending) {
-        const wrappedExecutor: SqlExecutor = async (text, params?) => {
-          const result = await executor(text, params);
-          return Array.isArray(result) ? result : [];
-        };
-        await migration.up(wrappedExecutor);
-        await executor(`INSERT INTO ${MIGRATIONS_TABLE} (name) VALUES ($1)`, [migration.name]);
+        await executor("BEGIN");
+        try {
+          await migration.up(executor);
+          await executor(`INSERT INTO ${MIGRATIONS_TABLE} (name) VALUES ($1)`, [migration.name]);
+          await executor("COMMIT");
+        } catch (err) {
+          await executor("ROLLBACK");
+          throw err;
+        }
         executedList.push(migration.name);
       }
 
@@ -126,6 +132,10 @@ export function createMigrationRunner(executor: SqlExecutor): MigrationRunner {
     },
 
     async down(steps = 1): Promise<string[]> {
+      if (steps <= 0) {
+        throw new RangeError("steps must be a positive integer");
+      }
+
       await ensureMigrationsTable(executor);
       const executed = await getExecutedMigrations(executor);
 
@@ -135,15 +145,20 @@ export function createMigrationRunner(executor: SqlExecutor): MigrationRunner {
       const rolledBack: string[] = [];
       for (const record of toRollback) {
         const migration = migrations.find((m) => m.name === record.name);
-        if (migration) {
-          const wrappedExecutor: SqlExecutor = async (text, params?) => {
-            const result = await executor(text, params);
-            return Array.isArray(result) ? result : [];
-          };
-          await migration.down(wrappedExecutor);
-          await executor(`DELETE FROM ${MIGRATIONS_TABLE} WHERE name = $1`, [migration.name]);
-          rolledBack.push(migration.name);
+        if (!migration) {
+          throw new Error(`Migration ${record.name} was executed but is no longer registered`);
         }
+
+        await executor("BEGIN");
+        try {
+          await migration.down(executor);
+          await executor(`DELETE FROM ${MIGRATIONS_TABLE} WHERE name = $1`, [migration.name]);
+          await executor("COMMIT");
+        } catch (err) {
+          await executor("ROLLBACK");
+          throw err;
+        }
+        rolledBack.push(migration.name);
       }
 
       return rolledBack;

@@ -1,36 +1,39 @@
 ---
 title: 分页
-description: 使用 createPaginator 实现高效的数据分页
+description: 使用 limit / offset 实现数据分页
 ---
 
-`createPaginator` 提供了基于页码和基于游标两种分页方式。
+VentoStack 的查询构建器通过 `limit` 和 `offset` 实现分页，没有单独的 `createPaginator` 函数。
 
 ## 基于页码的分页
 
 ```typescript
-import { createPaginator } from "@ventostack/database";
-
-const paginator = createPaginator(db);
-
 router.get("/users", async (ctx) => {
-  const page = Number(ctx.query.page ?? 1);
-  const limit = Number(ctx.query.limit ?? 20);
+  const page = Math.max(1, parseInt(ctx.query.page ?? "1", 10) || 1);
+  const limit = Math.max(1, Math.min(100, parseInt(ctx.query.limit ?? "20", 10) || 20));
+  const offset = (page - 1) * limit;
 
-  const result = await paginator.paginate(
-    db.query(UserModel).where("active", "=", true).orderBy("createdAt", "DESC"),
-    { page, limit }
-  );
+  const data = await db
+    .query(UserModel)
+    .where("active", "=", true)
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .offset(offset)
+    .list();
+
+  const total = await db.query(UserModel).where("active", "=", true).count();
+  const totalPages = Math.ceil(total / limit);
 
   return ctx.json({
-    data: result.data,
+    data,
     pagination: {
-      page: result.page,
-      limit: result.limit,
-      total: result.total,
-      totalPages: result.totalPages,
-      hasNextPage: result.hasNextPage,
-      hasPrevPage: result.hasPrevPage,
-    }
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 ```
@@ -53,22 +56,29 @@ router.get("/users", async (ctx) => {
 
 ## 基于游标的分页（无限滚动）
 
-游标分页性能更优，适合大数据集和无限滚动场景：
+游标分页性能更优，适合大数据集和无限滚动场景。利用 `where` + `orderBy` + `limit` 实现：
 
 ```typescript
 router.get("/feed", async (ctx) => {
   const cursor = ctx.query.cursor;
-  const limit = Number(ctx.query.limit ?? 20);
+  const pageSize = 20;
 
-  const result = await paginator.cursorPaginate(
-    db.query(PostModel).where("published", "=", true).orderBy("createdAt", "DESC"),
-    { cursor, limit, cursorField: "createdAt" }
-  );
+  let query = db.query(PostModel).orderBy("createdAt", "desc").limit(pageSize);
+  if (cursor) {
+    const cursorDate = new Date(cursor);
+    if (isNaN(cursorDate.getTime())) throw new Error("Invalid cursor");
+    query = query.where("createdAt", "<", cursorDate);
+  }
+  const rows = await query.list();
+
+  const hasMore = rows.length > pageSize;
+  const data = hasMore ? rows.slice(0, pageSize) : rows;
+  const nextCursor = hasMore ? data[data.length - 1]?.createdAt.toISOString() : undefined;
 
   return ctx.json({
-    data: result.data,
-    nextCursor: result.nextCursor,
-    hasMore: result.hasMore,
+    data,
+    nextCursor,
+    hasMore,
   });
 });
 ```
@@ -85,33 +95,9 @@ router.get("/feed", async (ctx) => {
 
 客户端下次请求时传入 `?cursor=2024-01-15T10:30:00.000Z`。
 
-## Paginator 接口
+## 注意事项
 
-```typescript
-interface PaginateOptions {
-  page: number;
-  limit: number;
-}
-
-interface PaginateResult<T> {
-  data: T[];
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
-
-interface CursorPaginateOptions {
-  cursor?: string;
-  limit: number;
-  cursorField: string;
-}
-
-interface CursorPaginateResult<T> {
-  data: T[];
-  nextCursor?: string;
-  hasMore: boolean;
-}
-```
+- 框架未提供 `createPaginator` 或 `cursorPaginate` 等高层封装，需自行组合 `limit` / `offset` / `count` / `where` 实现
+- `QueryExecutor` 提供 `count()` 方法用于获取总行数。`count()` 会忽略查询上已设置的 `limit` 和 `offset`，仅统计满足条件的总行数
+- `get()` 始终返回至多一行。如果查询未设置 `limit`，框架会自动追加 `LIMIT 1`；如果已设置 `limit`，则保留该限制值
+- 游标分页需要确保游标字段上有索引，且排序方向与查询条件一致

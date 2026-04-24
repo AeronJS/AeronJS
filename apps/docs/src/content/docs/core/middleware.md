@@ -79,7 +79,7 @@ const authMiddleware: Middleware = async (ctx, next) => {
     // 提前返回，后续中间件不会执行
     return ctx.json({ error: "Unauthorized" }, 401);
   }
-  ctx.state.set("userId", parseToken(token));
+  ctx.state.userId = parseToken(token);
   return next();
 };
 ```
@@ -105,7 +105,7 @@ app.use(requestLogger({ silent: true }));
 
 ### errorHandler — 全局错误处理
 
-统一捕获未处理异常，VentoStackError 返回结构化响应，其他错误返回 500 且不暴露内部细节：
+统一捕获未处理异常，`VentoStackError` 返回结构化响应，其他错误返回 500 且不暴露内部细节：
 
 ```typescript
 import { errorHandler } from "@ventostack/core";
@@ -115,25 +115,37 @@ app.use(errorHandler());
 
 // 传入自定义 logger
 app.use(errorHandler({ logger }));
+
+// 自定义生产环境错误消息
+app.use(errorHandler({ fallbackMessage: "服务暂时不可用" }));
 ```
 
-## 常见中间件示例
-
-### CORS 中间件
+### cors — 跨域处理
 
 ```typescript
 import { cors } from "@ventostack/core";
 
 app.use(cors({ origin: "https://example.com" }));
+
+// 允许多个源
+app.use(cors({ origin: ["https://a.com", "https://b.com"] }));
+
+// 使用函数判断
+app.use(cors({ origin: (origin) => origin.endsWith(".example.com") }));
 ```
 
-### 请求 ID 中间件
+### requestId — 请求 ID
+
+从请求头读取或自动生成 UUID，并注入到 `ctx.state` 与响应头中：
 
 ```typescript
 import { requestId } from "@ventostack/core";
 
-app.use(requestId("X-Request-Id"));
+app.use(requestId());           // 默认 X-Request-Id
+app.use(requestId("X-Trace-Id")); // 自定义头名
 ```
+
+## 常见中间件示例
 
 ### 请求体大小限制
 
@@ -148,3 +160,18 @@ const bodyLimit = (maxBytes: number): Middleware => async (ctx, next) => {
 
 app.use(bodyLimit(1024 * 1024)); // 1MB
 ```
+
+## 其他内置中间件
+
+`@ventostack/core` 还提供了以下中间件，详见各自文档页面：
+
+- **限流** — `rateLimit`（见 [限流](/docs/core/rate-limit)）
+- **超时** — `timeout`（见 [超时](/docs/core/timeout)）
+- **CSRF 防护** — `csrf`（见 [CSRF](/docs/core/csrf)）
+- **SSRF 防护** — `createSSRFGuard`（见 [SSRF](/docs/core/ssrf)）
+- **上传校验** — `createUploadValidator`（见 [上传](/docs/core/upload)）
+- **HMAC 签名校验** — `createHMACSigner`（见 [HMAC](/docs/core/hmac)）
+- **XSS 防护** — `xssProtection`（见 [XSS](/docs/core/xss)）
+- **IP 过滤** — `ipFilter`（见 [IP 过滤](/docs/core/ip-filter)）
+- **HTTPS 强制** — `httpsEnforce`（见 [HTTPS](/docs/core/https)）
+- **多租户** — `createTenantMiddleware`（见 [多租户](/docs/core/tenant)）

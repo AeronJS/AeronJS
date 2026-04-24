@@ -54,7 +54,7 @@ router.get("/events/:at<date>", async (ctx) => {
 ```typescript
 // 解析 JSON 请求体
 router.post("/users", async (ctx) => {
-  const body = await ctx.body<{ name: string; email: string }>();
+  const body = await ctx.request.json();
   // body.name, body.email
 });
 

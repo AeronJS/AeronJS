@@ -92,7 +92,7 @@ describe("orWhere", () => {
       .where("name", "=", "Alice")
       .orWhere("name", "=", "Bob");
     const { text, params } = qb.toSQL();
-    expect(text).toBe("SELECT * FROM users WHERE name = $1 OR name = $2");
+    expect(text).toBe("SELECT * FROM users WHERE (name = $1 OR name = $2)");
     expect(params).toEqual(["Alice", "Bob"]);
   });
 
@@ -102,14 +102,14 @@ describe("orWhere", () => {
       .where("name", "=", "Alice")
       .orWhere("name", "=", "Bob");
     const { text, params } = qb.toSQL();
-    expect(text).toBe("SELECT * FROM users WHERE age >= $1 AND name = $2 OR name = $3");
+    expect(text).toBe("SELECT * FROM users WHERE age >= $1 AND (name = $2 OR name = $3)");
     expect(params).toEqual([18, "Alice", "Bob"]);
   });
 
   test("orWhere with IS NULL", () => {
     const qb = createQueryBuilder(UserModel).where("name", "=", "Alice").orWhere("age", "IS NULL");
     const { text, params } = qb.toSQL();
-    expect(text).toBe("SELECT * FROM users WHERE name = $1 OR age IS NULL");
+    expect(text).toBe("SELECT * FROM users WHERE (name = $1 OR age IS NULL)");
     expect(params).toEqual(["Alice"]);
   });
 
@@ -118,7 +118,7 @@ describe("orWhere", () => {
       .where("name", "=", "Alice")
       .orWhere("id", "IN", [1, 2, 3]);
     const { text, params } = qb.toSQL();
-    expect(text).toBe("SELECT * FROM users WHERE name = $1 OR id IN ($2, $3, $4)");
+    expect(text).toBe("SELECT * FROM users WHERE (name = $1 OR id IN ($2, $3, $4))");
     expect(params).toEqual(["Alice", 1, 2, 3]);
   });
 });
@@ -262,7 +262,7 @@ describe("immutability", () => {
     const qb1 = createQueryBuilder(UserModel).where("name", "=", "Alice");
     const qb2 = qb1.orWhere("name", "=", "Bob");
     expect(qb1.toSQL().text).toBe("SELECT * FROM users WHERE name = $1");
-    expect(qb2.toSQL().text).toBe("SELECT * FROM users WHERE name = $1 OR name = $2");
+    expect(qb2.toSQL().text).toBe("SELECT * FROM users WHERE (name = $1 OR name = $2)");
   });
 
   test("groupBy does not mutate original builder", () => {
