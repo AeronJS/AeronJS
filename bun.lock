@@ -142,7 +142,42 @@
         "@types/bun": "latest",
       },
     },
-    "packages/platform/admin": {
+    "packages/platform/system": {
+      "name": "@ventostack/system",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/cache": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+        "@ventostack/events": "workspace:*",
+        "@ventostack/observability": "workspace:*",
+      },
+      "devDependencies": {
+        "@ventostack/testing": "workspace:*",
+      },
+    },
+    "packages/testing": {
+      "name": "@ventostack/testing",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/webhook": {
+      "name": "@ventostack/webhook",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "platform/admin": {
       "name": "@ventostack/admin",
       "version": "0.1.0",
       "dependencies": {
@@ -166,9 +201,6 @@
         "zustand": "^5.0.12",
       },
       "devDependencies": {
-        "@biomejs/biome": "^2.4.13",
-        "@doremijs/biome-config": "^0.2.1",
-        "@doremijs/igit-cli": "0.0.10-fix1",
         "@types/file-saver": "^2.0.7",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
@@ -183,24 +215,20 @@
         "vite-plugin-svgr": "^5.2.0",
       },
     },
-    "packages/testing": {
-      "name": "@ventostack/testing",
+    "platform/backend": {
+      "name": "@ventostack/backend",
       "version": "0.1.0",
       "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/cache": "workspace:*",
         "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+        "@ventostack/events": "workspace:*",
+        "@ventostack/observability": "workspace:*",
+        "@ventostack/system": "workspace:*",
       },
       "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/webhook": {
-      "name": "@ventostack/webhook",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
+        "typescript": "~6.0.2",
       },
     },
   },
@@ -368,28 +396,6 @@
     "@cspotcode/source-map-support": ["@cspotcode/source-map-support@0.8.1", "", { "dependencies": { "@jridgewell/trace-mapping": "0.3.9" } }, "sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw=="],
 
     "@ctrl/tinycolor": ["@ctrl/tinycolor@4.2.0", "", {}, "sha512-kzyuwOAQnXJNLS9PSyrk0CWk35nWJW/zl/6KvnTBMFK65gm7U1/Z5BqjxeapjZCIhQcM/DsrEmcbRwDyXyXK4A=="],
-
-    "@doremijs/biome-config": ["@doremijs/biome-config@0.2.1", "", { "peerDependencies": { "@biomejs/biome": "^2.0.0" } }, "sha512-nqSw0dbOGGZk/zM4W9puQPCtblUjszgSTntuEaA1pqjaiR/8Yu2Dktjatnxn2iGN6qUue9Nq4hQi8LDfyiRAGw=="],
-
-    "@doremijs/igit-cli": ["@doremijs/igit-cli@0.0.10-fix1", "", { "dependencies": { "@doremijs/igit-core": "0.0.10" }, "bin": { "igit": "bin/index.mjs" } }, "sha512-OArD7OjtTq13CF0iPYD3wkRGfAtzW4KQzZnGKA9gArpb4WoWalRzSWdhv6VJHXHi7qL3eKmobZv1XMJSW6k77A=="],
-
-    "@doremijs/igit-core": ["@doremijs/igit-core@0.0.10", "", { "optionalDependencies": { "@doremijs/igit-core-darwin-arm64": "0.0.10", "@doremijs/igit-core-darwin-x64": "0.0.10", "@doremijs/igit-core-linux-arm64-gnu": "0.0.10", "@doremijs/igit-core-linux-arm64-musl": "0.0.10", "@doremijs/igit-core-linux-x64-gnu": "0.0.10", "@doremijs/igit-core-linux-x64-musl": "0.0.10", "@doremijs/igit-core-win32-arm64-msvc": "0.0.10", "@doremijs/igit-core-win32-x64-msvc": "0.0.10" } }, "sha512-IOMZlITfxjiLZeyeYoEZbB+Gzdtaq7pa981wWB+n4mulJlVtRcqD7aWl+Jw+stVyeF0701o6EOyoqwH8Qkinqg=="],
-
-    "@doremijs/igit-core-darwin-arm64": ["@doremijs/igit-core-darwin-arm64@0.0.10", "", { "os": "darwin", "cpu": "arm64" }, "sha512-ROF0U3teXlX1BOBO5Td2Z1GkV6iW/GTlAiscy9xhUVNPbeZql7edVLiM+Yoh77VdnEUQNM7ayhlBK8AfrVS31g=="],
-
-    "@doremijs/igit-core-darwin-x64": ["@doremijs/igit-core-darwin-x64@0.0.10", "", { "os": "darwin", "cpu": "x64" }, "sha512-HfME7fbjvho/JxtQ4+9sf13l7uLfX06/2JHBNFkrTQptQHsC9Qms6jCKZqrokVQSMSRFOJxkjyzI8GmY+wlGMg=="],
-
-    "@doremijs/igit-core-linux-arm64-gnu": ["@doremijs/igit-core-linux-arm64-gnu@0.0.10", "", { "os": "linux", "cpu": "arm64" }, "sha512-ogUdkDpenq4w1vV+gdjOzcLuj+iw2HpKo22eOFdAdMEnmhms8x6MO9+hH2oprWZwkgszrThHhPHh1FPKK8EKbw=="],
-
-    "@doremijs/igit-core-linux-arm64-musl": ["@doremijs/igit-core-linux-arm64-musl@0.0.10", "", { "os": "linux", "cpu": "arm64" }, "sha512-7zPsJfAFN0+cfZzbdP8Kjfz4y5UlvN2pw0dtbreiznN96CfCvNUNpFIjX9PgVR0nN1y93cbbmJNed/kjWHLVOA=="],
-
-    "@doremijs/igit-core-linux-x64-gnu": ["@doremijs/igit-core-linux-x64-gnu@0.0.10", "", { "os": "linux", "cpu": "x64" }, "sha512-gFlWiA+AK0QRWZ//3OtkR+pUtfhgDToYSFbXrTWbroWoKszbg8tDGyn85Y5C8vP8eGfOfPgr/ybzw7EfXedA5g=="],
-
-    "@doremijs/igit-core-linux-x64-musl": ["@doremijs/igit-core-linux-x64-musl@0.0.10", "", { "os": "linux", "cpu": "x64" }, "sha512-FaPVci/oemxi4ToEA7oSzW6qhS3xrwuc5Y8LvJX43E2ZecLT1oMa/MZg6moCkS4HEDQmLRJQic9kLUHKLxZ0lw=="],
-
-    "@doremijs/igit-core-win32-arm64-msvc": ["@doremijs/igit-core-win32-arm64-msvc@0.0.10", "", { "os": "win32", "cpu": "arm64" }, "sha512-ivVeMJPcxZR2r20JPVk+zOeEf7eN41iI0tlqwQbTi4pYsk11pnQ8VCIjXOGeVTknjUF+aegZyVL173gNl35dkA=="],
-
-    "@doremijs/igit-core-win32-x64-msvc": ["@doremijs/igit-core-win32-x64-msvc@0.0.10", "", { "os": "win32", "cpu": "x64" }, "sha512-q6628HqOTjDl6gSP81qVbVkYtMfRBUHwLqXPgzdnDNx6f4kcjuCVW6ME7CCNOJ3a9tUWNlOtFfOEqMK7h8gyTg=="],
 
     "@doremijs/o2t": ["@doremijs/o2t@0.1.11", "", { "dependencies": { "swagger2openapi": "^7.0.8" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" }, "optionalPeers": ["react"], "bin": { "o2t": "bin/o2t.mjs" } }, "sha512-Ctaviw8K9CfJc1lOcE9j0HPC8KRISkDbt9ItcVTz9JY3tk+gBRxwNXEAGb4Jh/CXH4C6zXMBEjWWFz6zVVQnSg=="],
 
@@ -1013,11 +1019,13 @@
 
     "@upsetjs/venn.js": ["@upsetjs/venn.js@2.0.0", "", { "optionalDependencies": { "d3-selection": "^3.0.0", "d3-transition": "^3.0.1" } }, "sha512-WbBhLrooyePuQ1VZxrJjtLvTc4NVfpOyKx0sKqioq9bX1C1m7Jgykkn8gLrtwumBioXIqam8DLxp88Adbue6Hw=="],
 
-    "@ventostack/admin": ["@ventostack/admin@workspace:packages/platform/admin"],
+    "@ventostack/admin": ["@ventostack/admin@workspace:platform/admin"],
 
     "@ventostack/ai": ["@ventostack/ai@workspace:packages/ai"],
 
     "@ventostack/auth": ["@ventostack/auth@workspace:packages/auth"],
+
+    "@ventostack/backend": ["@ventostack/backend@workspace:platform/backend"],
 
     "@ventostack/cache": ["@ventostack/cache@workspace:packages/cache"],
 
@@ -1036,6 +1044,8 @@
     "@ventostack/observability": ["@ventostack/observability@workspace:packages/observability"],
 
     "@ventostack/openapi": ["@ventostack/openapi@workspace:packages/openapi"],
+
+    "@ventostack/system": ["@ventostack/system@workspace:packages/platform/system"],
 
     "@ventostack/testing": ["@ventostack/testing@workspace:packages/testing"],
 
@@ -2359,9 +2369,9 @@
 
     "@quansync/fs/quansync": ["quansync@1.0.0", "", {}, "sha512-5xZacEEufv3HSTPQuchrvV6soaiACMFnq1H8wkVioctoH3TRha9Sz66lOxRwPK/qZj7HPiSveih9yAyh98gvqA=="],
 
-    "@ventostack/admin/@biomejs/biome": ["@biomejs/biome@2.4.13", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.4.13", "@biomejs/cli-darwin-x64": "2.4.13", "@biomejs/cli-linux-arm64": "2.4.13", "@biomejs/cli-linux-arm64-musl": "2.4.13", "@biomejs/cli-linux-x64": "2.4.13", "@biomejs/cli-linux-x64-musl": "2.4.13", "@biomejs/cli-win32-arm64": "2.4.13", "@biomejs/cli-win32-x64": "2.4.13" }, "bin": { "biome": "bin/biome" } }, "sha512-gLXOwkOBBg0tr7bDsqlkIh4uFeKuMjxvqsrb1Tukww1iDmHcfr4Uu8MoQxp0Rcte+69+osRNWXwHsu/zxT6XqA=="],
-
     "@ventostack/admin/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
+
+    "@ventostack/backend/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "anymatch/picomatch": ["picomatch@2.3.2", "", {}, "sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA=="],
 
@@ -2450,22 +2460,6 @@
     "@expressive-code/plugin-shiki/shiki/@shikijs/themes": ["@shikijs/themes@3.23.0", "", { "dependencies": { "@shikijs/types": "3.23.0" } }, "sha512-5qySYa1ZgAT18HR/ypENL9cUSGOeI2x+4IvYJu4JgVJdizn6kG4ia5Q1jDEOi7gTbN4RbuYtmHh0W3eccOrjMA=="],
 
     "@expressive-code/plugin-shiki/shiki/@shikijs/types": ["@shikijs/types@3.23.0", "", { "dependencies": { "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4" } }, "sha512-3JZ5HXOZfYjsYSk0yPwBrkupyYSLpAE26Qc0HLghhZNGTZg/SKxXIIgoxOpmmeQP0RRSDJTk1/vPfw9tbw+jSQ=="],
-
-    "@ventostack/admin/@biomejs/biome/@biomejs/cli-darwin-arm64": ["@biomejs/cli-darwin-arm64@2.4.13", "", { "os": "darwin", "cpu": "arm64" }, "sha512-2KImO1jhNFBa2oWConyr0x6flxbQpGKv6902uGXpYM62Xyem8U80j441SyUJ8KyngsmKbQjeIv1q2CQfDkNnYg=="],
-
-    "@ventostack/admin/@biomejs/biome/@biomejs/cli-darwin-x64": ["@biomejs/cli-darwin-x64@2.4.13", "", { "os": "darwin", "cpu": "x64" }, "sha512-BKrJklbaFN4p1Ts4kPBczo+PkbsHQg57kmJ+vON9u2t6uN5okYHaSr7h/MutPCWQgg2lglaWoSmm+zhYW+oOkg=="],
-
-    "@ventostack/admin/@biomejs/biome/@biomejs/cli-linux-arm64": ["@biomejs/cli-linux-arm64@2.4.13", "", { "os": "linux", "cpu": "arm64" }, "sha512-NzkUDSqfvMBrPplKgVr3aXLHZ2NEELvvF4vZxXulEylKWIGqlvNEcwUcj9OLrn75TD3lJ/GIqCVlBwd1MZCuYQ=="],
-
-    "@ventostack/admin/@biomejs/biome/@biomejs/cli-linux-arm64-musl": ["@biomejs/cli-linux-arm64-musl@2.4.13", "", { "os": "linux", "cpu": "arm64" }, "sha512-U5MsuBQW25dXaYtqWWSPM3P96H6Y+fHuja3TQpMNnylocHW0tEbtFTDlUj6oM+YJLntvEkQy4grBvQNUD4+RCg=="],
-
-    "@ventostack/admin/@biomejs/biome/@biomejs/cli-linux-x64": ["@biomejs/cli-linux-x64@2.4.13", "", { "os": "linux", "cpu": "x64" }, "sha512-Az3ZZedYRBo9EQzNnD9SxFcR1G5QsGo6VEc2hIyVPZ1rdKwee/7E9oeBBZFpE8Z44ekxsDQBqbiWGW5ShOhUSQ=="],
-
-    "@ventostack/admin/@biomejs/biome/@biomejs/cli-linux-x64-musl": ["@biomejs/cli-linux-x64-musl@2.4.13", "", { "os": "linux", "cpu": "x64" }, "sha512-Z601MienRgTBDza/+u2CH3RSrWoXo9rtr8NK6A4KJzqGgfxx+H3VlyLgTJ4sRo40T3pIsqpTmiOQEvYzQvBRvQ=="],
-
-    "@ventostack/admin/@biomejs/biome/@biomejs/cli-win32-arm64": ["@biomejs/cli-win32-arm64@2.4.13", "", { "os": "win32", "cpu": "arm64" }, "sha512-Px9PS2B5/Q183bUwy/5VHqp3J2lzdOCeVGzMpphYfl8oSa7VDCqenBdqWpy6DCy/en4Rbf/Y1RieZF6dJPcc9A=="],
-
-    "@ventostack/admin/@biomejs/biome/@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.4.13", "", { "os": "win32", "cpu": "x64" }, "sha512-tTcMkXyBrmHi9BfrD2VNHs/5rYIUKETqsBlYOvSAABwBkJhSDVb5e7wPukftsQbO3WzQkXe6kaztC6WtUOXSoQ=="],
 
     "bl/readable-stream/string_decoder": ["string_decoder@1.3.0", "", { "dependencies": { "safe-buffer": "~5.2.0" } }, "sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA=="],
 

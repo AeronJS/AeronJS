@@ -1,74 +1,79 @@
 /**
- * @ventostack/system - 用户管理路由
+ * @ventostack/system - 通用 CRUD 路由工厂
+ *
+ * 为角色、菜单、部门、岗位、字典、配置等实体提供统一的路由定义。
  */
 
 import { createRouter } from "@ventostack/core";
 import type { Middleware, Router } from "@ventostack/core";
-import type { UserService } from "../services/user";
 import { ok, okPage, fail, parseBody, pageOf } from "./common";
 
-export function createUserRoutes(
-  userService: UserService,
-  authMiddleware: Middleware,
-  perm: (resource: string, action: string) => Middleware,
-): Router {
+interface CrudService {
+  list: (params: Record<string, unknown>) => Promise<{ items: unknown[]; total: number; page: number; pageSize: number }>;
+  getById: (id: string) => Promise<unknown>;
+  create: (body: unknown) => Promise<{ id: string }>;
+  update: (id: string, body: unknown) => Promise<void>;
+  delete: (id: string) => Promise<void>;
+}
+
+interface CrudRouteOptions {
+  basePath: string;
+  resource: string;
+  service: CrudService;
+  authMiddleware: Middleware;
+  perm: (resource: string, action: string) => Middleware;
+  extraRoutes?: (router: Router) => void;
+}
+
+export function createCrudRoutes(options: CrudRouteOptions): Router {
+  const { basePath, resource, service, authMiddleware, perm, extraRoutes } = options;
   const router = createRouter();
 
-  router.get("/api/system/users", authMiddleware, perm("system", "user:list"), async (ctx) => {
+  // List
+  router.get(`${basePath}`, authMiddleware, perm(resource.split(":")[0]!, `${resource}:list`), async (ctx) => {
     const { page, pageSize } = pageOf(ctx.query as Record<string, unknown>);
-    const result = await userService.list({
-      page,
-      pageSize,
-      username: (ctx.query as Record<string, unknown>).username as string | undefined,
-      status: (ctx.query as Record<string, unknown>).status as number | undefined,
-      deptId: (ctx.query as Record<string, unknown>).deptId as string | undefined,
-    });
+    const result = await service.list({ ...(ctx.query as Record<string, unknown>), page, pageSize });
     return okPage(result.items, result.total, result.page, result.pageSize);
   });
 
-  router.get("/api/system/users/:id", authMiddleware, perm("system", "user:query"), async (ctx) => {
+  // Get by ID
+  router.get(`${basePath}/:id`, authMiddleware, perm(resource.split(":")[0]!, `${resource}:query`), async (ctx) => {
     const id = (ctx.params as Record<string, string>).id;
-    const user = await userService.getById(id);
-    if (!user) return fail("User not found", 404, 404);
-    return ok(user);
+    const item = await service.getById(id);
+    if (!item) return fail("Not found", 404, 404);
+    return ok(item);
   });
 
-  router.post("/api/system/users", authMiddleware, perm("system", "user:create"), async (ctx) => {
+  // Create
+  router.post(`${basePath}`, authMiddleware, perm(resource.split(":")[0]!, `${resource}:create`), async (ctx) => {
     try {
       const body = await parseBody(ctx.request);
-      const result = await userService.create(body as any);
+      const result = await service.create(body);
       return ok(result);
     } catch (e) {
       return fail(e instanceof Error ? e.message : "Create failed", 400);
     }
   });
 
-  router.put("/api/system/users/:id", authMiddleware, perm("system", "user:update"), async (ctx) => {
+  // Update
+  router.put(`${basePath}/:id`, authMiddleware, perm(resource.split(":")[0]!, `${resource}:update`), async (ctx) => {
     const id = (ctx.params as Record<string, string>).id;
     const body = await parseBody(ctx.request);
-    await userService.update(id, body as any);
+    await service.update(id, body);
     return ok(null);
   });
 
-  router.delete("/api/system/users/:id", authMiddleware, perm("system", "user:delete"), async (ctx) => {
+  // Delete
+  router.delete(`${basePath}/:id`, authMiddleware, perm(resource.split(":")[0]!, `${resource}:delete`), async (ctx) => {
     const id = (ctx.params as Record<string, string>).id;
-    await userService.delete(id);
+    await service.delete(id);
     return ok(null);
   });
 
-  router.put("/api/system/users/:id/reset-pwd", authMiddleware, perm("system", "user:resetPwd"), async (ctx) => {
-    const id = (ctx.params as Record<string, string>).id;
-    const body = await parseBody(ctx.request);
-    await userService.resetPassword(id, body.newPassword as string);
-    return ok(null);
-  });
-
-  router.put("/api/system/users/:id/status", authMiddleware, perm("system", "user:update"), async (ctx) => {
-    const id = (ctx.params as Record<string, string>).id;
-    const body = await parseBody(ctx.request);
-    await userService.updateStatus(id, body.status as number);
-    return ok(null);
-  });
+  // Extra routes
+  if (extraRoutes) {
+    extraRoutes(router);
+  }
 
   return router;
 }

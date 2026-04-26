@@ -5,7 +5,7 @@
     "type": "git",
     "url": "git+https://github.com/Ventorium/VentoStack.git"
   },
-  "workspaces": ["packages/*", "packages/platform/*", "apps/*"],
+  "workspaces": ["packages/*", "packages/platform/*", "apps/*", "platform/*"],
   "scripts": {
     "dev": "bun --hot apps/example/src/main.ts",
     "dev:doc": "bun run --cwd apps/docs dev",

@@ -41,9 +41,12 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
-        '^/(api|admin)': 'http://192.168.xxx.xxx:8080',
+        '^/(api|admin)': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
         '^/ws': {
-          target: 'http://192.168.xxx.xxx:8080',
+          target: 'http://localhost:8080',
           ws: true,
           changeOrigin: true
         }
