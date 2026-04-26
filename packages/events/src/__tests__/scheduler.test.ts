@@ -132,6 +132,168 @@ describe("Scheduler", () => {
     });
   });
 
+  describe("execution hooks", () => {
+    test("onBeforeExecute is called before handler", async () => {
+      scheduler = createScheduler();
+      const order: string[] = [];
+      scheduler.schedule(
+        {
+          name: "hooked",
+          interval: 30,
+          onBeforeExecute: async () => {
+            order.push("before");
+          },
+        },
+        () => {
+          order.push("handler");
+        },
+      );
+      await Bun.sleep(100);
+      expect(order.length).toBeGreaterThanOrEqual(4);
+      // Each cycle should be: before, handler
+      for (let i = 0; i < order.length; i += 2) {
+        expect(order[i]).toBe("before");
+        if (i + 1 < order.length) {
+          expect(order[i + 1]).toBe("handler");
+        }
+      }
+    });
+
+    test("onAfterExecute is called after successful handler with duration", async () => {
+      scheduler = createScheduler();
+      let receivedDuration = -1;
+      scheduler.schedule(
+        {
+          name: "after-hook",
+          interval: 30,
+          onAfterExecute: async (task) => {
+            receivedDuration = task.duration;
+          },
+        },
+        () => {},
+      );
+      await Bun.sleep(100);
+      expect(receivedDuration).toBeGreaterThanOrEqual(0);
+    });
+
+    test("onError is called when handler throws with error and duration", async () => {
+      scheduler = createScheduler();
+      let receivedError: Error | undefined;
+      let receivedDuration = -1;
+      scheduler.schedule(
+        {
+          name: "err-hook",
+          interval: 30,
+          onError: async (task) => {
+            receivedError = task.error;
+            receivedDuration = task.duration;
+          },
+        },
+        () => {
+          throw new Error("hook boom");
+        },
+      );
+      await Bun.sleep(100);
+      expect(receivedError).toBeDefined();
+      expect(receivedError!.message).toBe("hook boom");
+      expect(receivedDuration).toBeGreaterThanOrEqual(0);
+    });
+
+    test("hooks are not called when not provided (backward compat)", async () => {
+      scheduler = createScheduler();
+      let count = 0;
+      scheduler.schedule({ name: "no-hooks", interval: 30 }, () => {
+        count++;
+      });
+      await Bun.sleep(100);
+      expect(count).toBeGreaterThanOrEqual(2);
+    });
+
+    test("all three hooks receive correct task name", async () => {
+      scheduler = createScheduler();
+      let beforeName = "";
+      let afterName = "";
+      let errName = "";
+      scheduler.schedule(
+        {
+          name: "named-task",
+          interval: 30,
+          onBeforeExecute: async (task) => {
+            beforeName = task.name;
+          },
+          onAfterExecute: async (task) => {
+            afterName = task.name;
+          },
+          onError: async (task) => {
+            errName = task.name;
+          },
+        },
+        () => {},
+      );
+      await Bun.sleep(100);
+      expect(beforeName).toBe("named-task");
+      expect(afterName).toBe("named-task");
+    });
+
+    test("onError receives the actual error object", async () => {
+      scheduler = createScheduler();
+      const thrownError = new TypeError("type error in handler");
+      let receivedError: Error | undefined;
+      scheduler.schedule(
+        {
+          name: "err-type",
+          interval: 30,
+          onError: async (task) => {
+            receivedError = task.error;
+          },
+        },
+        () => {
+          throw thrownError;
+        },
+      );
+      await Bun.sleep(100);
+      expect(receivedError).toBe(thrownError);
+      expect(receivedError).toBeInstanceOf(TypeError);
+    });
+
+    test("onAfterExecute is NOT called when handler throws", async () => {
+      scheduler = createScheduler();
+      let afterCalled = false;
+      scheduler.schedule(
+        {
+          name: "no-after-on-err",
+          interval: 30,
+          onAfterExecute: async () => {
+            afterCalled = true;
+          },
+          onError: async () => {},
+        },
+        () => {
+          throw new Error("fail");
+        },
+      );
+      await Bun.sleep(100);
+      expect(afterCalled).toBe(false);
+    });
+
+    test("onBeforeExecute receives scheduledAt timestamp", async () => {
+      scheduler = createScheduler();
+      let receivedAt = -1;
+      scheduler.schedule(
+        {
+          name: "ts-task",
+          interval: 30,
+          onBeforeExecute: async (task) => {
+            receivedAt = task.scheduledAt;
+          },
+        },
+        () => {},
+      );
+      await Bun.sleep(100);
+      expect(receivedAt).toBeGreaterThan(0);
+    });
+  });
+
   describe("error handling", () => {
     test("handler error does not crash the scheduler", async () => {
       scheduler = createScheduler();

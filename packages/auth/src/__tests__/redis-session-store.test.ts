@@ -3,10 +3,11 @@ import { createRedisSessionStore } from "../redis-session-store";
 import type { RedisSessionClientLike } from "../redis-session-store";
 
 /** 创建内存 mock Redis 客户端 */
-function createMockRedisClient(): RedisSessionClientLike {
+function createMockRedisClient(): RedisSessionClientLike & { store: Map<string, { value: string; timer?: Timer }> } {
   const store = new Map<string, { value: string; timer?: Timer }>();
 
   return {
+    store,
     async get(key: string): Promise<string | null> {
       const entry = store.get(key);
       if (!entry) return null;
@@ -31,6 +32,56 @@ function createMockRedisClient(): RedisSessionClientLike {
       if (entry.timer) clearTimeout(entry.timer);
       store.delete(key);
       return 1;
+    },
+    async sadd(key: string, ...members: string[]): Promise<number> {
+      // Simulate Redis set using a JSON array stored at the key
+      let existing: string[] = [];
+      const entry = store.get(key);
+      if (entry) {
+        try {
+          existing = JSON.parse(entry.value) as string[];
+        } catch {
+          existing = [];
+        }
+      }
+      let added = 0;
+      for (const m of members) {
+        if (!existing.includes(m)) {
+          existing.push(m);
+          added++;
+        }
+      }
+      store.set(key, { value: JSON.stringify(existing) });
+      return added;
+    },
+    async srem(key: string, ...members: string[]): Promise<number> {
+      const entry = store.get(key);
+      if (!entry) return 0;
+      let existing: string[] = [];
+      try {
+        existing = JSON.parse(entry.value) as string[];
+      } catch {
+        return 0;
+      }
+      let removed = 0;
+      for (const m of members) {
+        const idx = existing.indexOf(m);
+        if (idx !== -1) {
+          existing.splice(idx, 1);
+          removed++;
+        }
+      }
+      store.set(key, { value: JSON.stringify(existing) });
+      return removed;
+    },
+    async smembers(key: string): Promise<string[]> {
+      const entry = store.get(key);
+      if (!entry) return [];
+      try {
+        return JSON.parse(entry.value) as string[];
+      } catch {
+        return [];
+      }
     },
   };
 }
@@ -206,5 +257,70 @@ describe("createRedisSessionStore + createSessionManager integration", () => {
     await Bun.sleep(1100);
     const result = await manager.get(session.id);
     expect(result).toBeNull();
+  });
+});
+
+describe("createRedisSessionStore deleteByUser", () => {
+  test("deleteByUser removes all sessions for a user", async () => {
+    const mockClient = createMockRedisClient();
+    const store = createRedisSessionStore({ client: mockClient });
+
+    // Create sessions for user1
+    await store.set({ id: "s1", data: { userId: "user1" }, expiresAt: Date.now() + 60000 });
+    await store.set({ id: "s2", data: { userId: "user1" }, expiresAt: Date.now() + 60000 });
+    // Create session for user2
+    await store.set({ id: "s3", data: { userId: "user2" }, expiresAt: Date.now() + 60000 });
+
+    const count = await store.deleteByUser!("user1");
+    expect(count).toBe(2);
+
+    // user1 sessions should be gone
+    expect(await store.get("s1")).toBeNull();
+    expect(await store.get("s2")).toBeNull();
+
+    // user2 session should still exist
+    expect(await store.get("s3")).not.toBeNull();
+  });
+
+  test("deleteByUser for non-existent user returns 0", async () => {
+    const mockClient = createMockRedisClient();
+    const store = createRedisSessionStore({ client: mockClient });
+
+    const count = await store.deleteByUser!("nonexistent");
+    expect(count).toBe(0);
+  });
+
+  test("deleteByUser cleans up user set key", async () => {
+    const mockClient = createMockRedisClient();
+    const store = createRedisSessionStore({ client: mockClient });
+
+    await store.set({ id: "s1", data: { userId: "user1" }, expiresAt: Date.now() + 60000 });
+
+    await store.deleteByUser!("user1");
+
+    // The user set key should also be deleted
+    const members = await mockClient.smembers!("session:user:user1");
+    expect(members).toEqual([]);
+  });
+
+  test("set tracks userId index via sadd", async () => {
+    const mockClient = createMockRedisClient();
+    const store = createRedisSessionStore({ client: mockClient });
+
+    await store.set({ id: "s1", data: { userId: "user1" }, expiresAt: Date.now() + 60000 });
+
+    const members = await mockClient.smembers!("session:user:user1");
+    expect(members).toContain("s1");
+  });
+
+  test("delete removes session from user index via srem", async () => {
+    const mockClient = createMockRedisClient();
+    const store = createRedisSessionStore({ client: mockClient });
+
+    await store.set({ id: "s1", data: { userId: "user1" }, expiresAt: Date.now() + 60000 });
+    await store.delete("s1");
+
+    const members = await mockClient.smembers!("session:user:user1");
+    expect(members).not.toContain("s1");
   });
 });

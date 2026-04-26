@@ -1,0 +1,55 @@
+---
+import MobileMenuFooter from 'virtual:starlight/components/MobileMenuFooter';
+import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro';
+import SidebarSublist from '@astrojs/starlight/components/SidebarSublist.astro';
+
+const { sidebar } = Astro.locals.starlightRoute;
+const currentPath = Astro.url.pathname;
+
+function getSection(path: string): 'framework' | 'platform' {
+	if (path.includes('/platform/')) return 'platform';
+	return 'framework';
+}
+const section = getSection(currentPath);
+
+const frameworkLabels = new Set([
+	'入门指南', '核心模块', '数据库模块', '缓存模块', '认证模块',
+	'事件模块', '可观测性', 'OpenAPI', '测试工具', 'AI 模块',
+]);
+
+const platformLabels = new Set([
+	'系统管理', '文件存储', '任务调度', '代码生成', '系统监控', '消息中心',
+]);
+
+// Filter and reorder sidebar entries
+const filteredSidebar = sidebar.filter((entry) => {
+	if (entry.type === 'link') return true;
+	if (entry.type === 'group') {
+		if (section === 'framework') return frameworkLabels.has(entry.label);
+		if (section === 'platform') return platformLabels.has(entry.label);
+	}
+	return false;
+}).map((entry) => {
+	// For 系统管理 group, ensure overview is the first entry
+	if (entry.type === 'group' && entry.label === '系统管理') {
+		const overviewIdx = entry.entries.findIndex(
+			(e) => e.type === 'link' && e.href.includes('/overview'),
+		);
+		if (overviewIdx > 0) {
+			const entries = [...entry.entries];
+			const [overview] = entries.splice(overviewIdx, 1);
+			entries.unshift(overview!);
+			return { ...entry, entries };
+		}
+	}
+	return entry;
+});
+---
+
+<SidebarPersister>
+	<SidebarSublist sublist={filteredSidebar} />
+</SidebarPersister>
+
+<div class="md:sl-hidden">
+	<MobileMenuFooter />
+</div>

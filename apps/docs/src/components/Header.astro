@@ -1,0 +1,131 @@
+---
+import config from 'virtual:starlight/user-config';
+
+import LanguageSelect from 'virtual:starlight/components/LanguageSelect';
+import Search from 'virtual:starlight/components/Search';
+import SiteTitle from 'virtual:starlight/components/SiteTitle';
+import SocialIcons from 'virtual:starlight/components/SocialIcons';
+import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
+
+const shouldRenderSearch =
+	config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
+
+const currentPath = Astro.url.pathname;
+
+function getActiveSection(path: string): string {
+	if (path.includes('/platform/')) return 'platform';
+	return 'framework';
+}
+const activeSection = getActiveSection(currentPath);
+---
+
+<div class="header">
+	<div class="title-wrapper sl-flex">
+		<SiteTitle />
+	</div>
+	<div class="sl-flex print:hidden">
+		{shouldRenderSearch && <Search />}
+	</div>
+	<nav class="section-tabs sl-hidden md:sl-flex print:hidden">
+		<a href="/framework/guides/introduction/" class:list={['section-tab', { active: activeSection === 'framework' }]}>
+			框架
+		</a>
+		<a href="/platform/system/overview/" class:list={['section-tab', { active: activeSection === 'platform' }]}>
+			平台
+		</a>
+	</nav>
+	<div class="sl-hidden md:sl-flex print:hidden right-group">
+		<div class="sl-flex social-icons">
+			<SocialIcons />
+		</div>
+		<ThemeSelect />
+		<LanguageSelect />
+	</div>
+</div>
+
+<style>
+	@layer starlight.core {
+		.header {
+			display: flex;
+			gap: var(--sl-nav-gap);
+			justify-content: space-between;
+			align-items: center;
+			height: 100%;
+		}
+
+		.title-wrapper {
+			overflow: clip;
+			padding: 0.25rem;
+			margin: -0.25rem;
+			min-width: 0;
+		}
+
+		.right-group,
+		.social-icons {
+			gap: 1rem;
+			align-items: center;
+		}
+		.social-icons::after {
+			content: '';
+			height: 2rem;
+			border-inline-end: 1px solid var(--sl-color-gray-5);
+		}
+
+		/* Section tabs */
+		.section-tabs {
+			display: flex;
+			gap: 0.25rem;
+			align-items: center;
+		}
+		.section-tab {
+			padding: 0.375rem 0.875rem;
+			border-radius: 0.375rem;
+			font-size: var(--sl-text-sm);
+			color: var(--sl-color-gray-2);
+			text-decoration: none;
+			font-weight: 500;
+			transition: color 0.15s, background-color 0.15s;
+		}
+		.section-tab:hover {
+			color: var(--sl-color-white);
+			background-color: var(--sl-color-gray-6);
+		}
+		.section-tab.active {
+			color: var(--sl-color-white);
+			background-color: var(--sl-color-gray-5);
+		}
+
+		@media (min-width: 50rem) {
+			:global(:root[data-has-sidebar]) {
+				--__sidebar-pad: calc(2 * var(--sl-nav-pad-x));
+			}
+			:global(:root:not([data-has-toc])) {
+				--__toc-width: 0rem;
+			}
+			.header {
+				--__sidebar-width: max(0rem, var(--sl-content-inline-start, 0rem) - var(--sl-nav-pad-x));
+				--__main-column-fr: calc(
+					(
+							100% + var(--__sidebar-pad, 0rem) - var(--__toc-width, var(--sl-sidebar-width)) -
+								(2 * var(--__toc-width, var(--sl-nav-pad-x))) - var(--sl-content-inline-start, 0rem) -
+								var(--sl-content-width)
+						) / 2
+				);
+				display: grid;
+				grid-template-columns:
+					/* 1 (site title) */
+					minmax(
+						calc(var(--__sidebar-width) + max(0rem, var(--__main-column-fr) - var(--sl-nav-gap))),
+						auto
+					)
+					/* 2 (search box): fills remaining space */
+					1fr
+					/* 3 (section tabs) */
+					auto
+					/* 4 (right items: github, theme) */
+					auto;
+				align-content: center;
+			}
+		}
+	}
+</style>

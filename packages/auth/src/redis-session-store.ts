@@ -19,6 +19,12 @@ export interface RedisSessionClientLike {
   expire(key: string, seconds: number): Promise<number>;
   /** 删除键 */
   del(key: string): Promise<number>;
+  /** 向集合添加成员 */
+  sadd?(key: string, ...members: string[]): Promise<number>;
+  /** 从集合移除成员 */
+  srem?(key: string, ...members: string[]): Promise<number>;
+  /** 获取集合所有成员 */
+  smembers?(key: string): Promise<string[]>;
 }
 
 /** Redis Session 存储选项 */
@@ -50,6 +56,10 @@ export function createRedisSessionStore(options: RedisSessionStoreOptions): Sess
     return `${keyPrefix}${id}`;
   }
 
+  function userKey(userId: string): string {
+    return `${keyPrefix}user:${userId}`;
+  }
+
   return {
     async get(id: string): Promise<Session | null> {
       const data = await client.get(prefixed(id));
@@ -70,14 +80,53 @@ export function createRedisSessionStore(options: RedisSessionStoreOptions): Sess
       }
       await client.set(key, JSON.stringify(session));
       await client.expire(key, ttlSeconds);
+
+      // Track userId -> sessionId index
+      const userId = session.data?.userId as string | undefined;
+      if (userId && client.sadd) {
+        await client.sadd(userKey(userId), session.id);
+      }
     },
 
     async delete(id: string): Promise<void> {
+      // Try to get session data before deleting to clean up user index
+      const data = await client.get(prefixed(id));
+      if (data) {
+        try {
+          const session = JSON.parse(data) as Session;
+          const userId = session.data?.userId as string | undefined;
+          if (userId && client.srem) {
+            await client.srem(userKey(userId), id);
+          }
+        } catch {
+          // Ignore parse errors on delete
+        }
+      }
       await client.del(prefixed(id));
     },
 
     async touch(id: string, ttl: number): Promise<void> {
       await client.expire(prefixed(id), ttl);
+    },
+
+    async deleteByUser(userId: string): Promise<number> {
+      if (!client.smembers || !client.del) {
+        return 0;
+      }
+
+      const uk = userKey(userId);
+      const sessionIds = await client.smembers(uk);
+      if (!sessionIds || sessionIds.length === 0) {
+        return 0;
+      }
+
+      let count = 0;
+      for (const sessionId of sessionIds) {
+        await client.del(prefixed(sessionId));
+        count++;
+      }
+      await client.del(uk);
+      return count;
     },
   };
 }

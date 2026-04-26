@@ -267,6 +267,11 @@ export function createJWT(config?: JWTConfig): JWTManager {
         throw new UnauthorizedError(`Unsupported algorithm: ${header.alg ?? "none"}`);
       }
 
+      // Validate typ header: if present, must be "JWT"
+      if (header.typ !== undefined && header.typ !== "JWT") {
+        throw new UnauthorizedError("Invalid token type");
+      }
+
       const algorithm = header.alg as JWTAlgorithm;
       const expectedAlgorithm = merged.algorithm ?? algorithm;
       if (algorithm !== expectedAlgorithm) {

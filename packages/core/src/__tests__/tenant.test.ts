@@ -139,4 +139,117 @@ describe("createTenantMiddleware", () => {
       expect(getTenantFromRequest(req)).toBeNull();
     });
   });
+
+  describe("validateTenant", () => {
+    it("should pass through when validateTenant returns true", async () => {
+      const { middleware } = createTenantMiddleware({
+        strategy: "header",
+        validateTenant: async () => true,
+      });
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-tenant-id": "tenant1" }));
+      const res = await middleware(ctx, makeNext());
+      expect(res.status).toBe(200);
+      expect(ctx.tenant).toEqual({ tenantId: "tenant1" });
+    });
+
+    it("should return 403 when validateTenant returns false", async () => {
+      const { middleware } = createTenantMiddleware({
+        strategy: "header",
+        validateTenant: async () => false,
+      });
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-tenant-id": "tenant1" }));
+      const res = await middleware(ctx, makeNext());
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body.error).toBe("Access denied to tenant");
+    });
+
+    it("should return 500 when validateTenant throws", async () => {
+      const { middleware } = createTenantMiddleware({
+        strategy: "header",
+        validateTenant: async () => {
+          throw new Error("DB connection failed");
+        },
+      });
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-tenant-id": "tenant1" }));
+      const res = await middleware(ctx, makeNext());
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body.error).toBe("Internal server error");
+    });
+
+    it("should maintain existing behavior when validateTenant is not provided", async () => {
+      const { middleware } = createTenantMiddleware({ strategy: "header" });
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-tenant-id": "tenant1" }));
+      const res = await middleware(ctx, makeNext());
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-tenant-id")).toBe("tenant1");
+    });
+
+    it("should pass correct tenantId to validateTenant (header strategy)", async () => {
+      let receivedId = "";
+      const { middleware } = createTenantMiddleware({
+        strategy: "header",
+        validateTenant: async (id) => {
+          receivedId = id;
+          return true;
+        },
+      });
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-tenant-id": "my-tenant" }));
+      await middleware(ctx, makeNext());
+      expect(receivedId).toBe("my-tenant");
+    });
+
+    it("should pass correct tenantId to validateTenant (subdomain strategy)", async () => {
+      let receivedId = "";
+      const { middleware } = createTenantMiddleware({
+        strategy: "subdomain",
+        validateTenant: async (id) => {
+          receivedId = id;
+          return true;
+        },
+      });
+      const ctx = createContext(makeRequest("http://acme.example.com/api"));
+      await middleware(ctx, makeNext());
+      expect(receivedId).toBe("acme");
+    });
+
+    it("should pass correct tenantId to validateTenant (path strategy)", async () => {
+      let receivedId = "";
+      const { middleware } = createTenantMiddleware({
+        strategy: "path",
+        validateTenant: async (id) => {
+          receivedId = id;
+          return true;
+        },
+      });
+      const ctx = createContext(makeRequest("http://localhost/path-tenant/api/users"));
+      await middleware(ctx, makeNext());
+      expect(receivedId).toBe("path-tenant");
+    });
+
+    it("should pass context to validateTenant", async () => {
+      let receivedCtx: unknown = null;
+      const { middleware } = createTenantMiddleware({
+        strategy: "header",
+        validateTenant: async (_id, ctx) => {
+          receivedCtx = ctx;
+          return true;
+        },
+      });
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-tenant-id": "t1" }));
+      await middleware(ctx, makeNext());
+      expect(receivedCtx).toBe(ctx);
+    });
+
+    it("should not set x-tenant-id response header when validateTenant returns false", async () => {
+      const { middleware } = createTenantMiddleware({
+        strategy: "header",
+        validateTenant: async () => false,
+      });
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-tenant-id": "tenant1" }));
+      const res = await middleware(ctx, makeNext());
+      expect(res.headers.get("x-tenant-id")).toBeNull();
+    });
+  });
 });

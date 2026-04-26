@@ -78,3 +78,7 @@ export type { ConnectionPool, ConnectionPoolOptions, PoolStats } from "./connect
 
 // Schema 差异：表/列的增删改检测与迁移 SQL 生成
 export type { SchemaDiff, TableDiff, ColumnSchema, TableSchema, ColumnDiff } from "./schema-diff";
+
+// Schema Reader：数据库表结构读取
+export { readTableSchema, listTables } from "./schema-reader";
+export type { TableSchemaInfo, ColumnSchemaInfo, IndexSchemaInfo } from "./schema-reader";

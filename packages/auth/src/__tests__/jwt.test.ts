@@ -157,6 +157,75 @@ describe("createJWT", () => {
         expect(payload.sub).toBe("user1");
       }
     });
+
+    test("token with typ: JWT passes verify", async () => {
+      const token = await jwt.sign({ sub: "user1" }, SECRET_32);
+      // sign() always sets typ: "JWT" in header
+      const payload = await jwt.verify(token, SECRET_32);
+      expect(payload.sub).toBe("user1");
+    });
+
+    test("token with typ: OTHER throws error on verify", async () => {
+      // Forge a token with typ: "OTHER"
+      const header = btoa(JSON.stringify({ alg: "HS256", typ: "OTHER" }))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+      const payload = btoa(JSON.stringify({ sub: "user1", iat: Math.floor(Date.now() / 1000) }))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+
+      // We need a valid signature for this test
+      const keyData = new TextEncoder().encode(SECRET_32);
+      const key = await crypto.subtle.importKey(
+        "raw",
+        keyData,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+      );
+      const signingInput = `${header}.${payload}`;
+      const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signingInput));
+      const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+      const fakeToken = `${signingInput}.${sigB64}`;
+
+      await expect(jwt.verify(fakeToken, SECRET_32)).rejects.toThrow("Invalid token type");
+    });
+
+    test("token without typ field passes verify (backward compat)", async () => {
+      // Forge a token without typ field
+      const header = btoa(JSON.stringify({ alg: "HS256" }))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+      const payload = btoa(JSON.stringify({ sub: "user1", iat: Math.floor(Date.now() / 1000) }))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+
+      const keyData = new TextEncoder().encode(SECRET_32);
+      const key = await crypto.subtle.importKey(
+        "raw",
+        keyData,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+      );
+      const signingInput = `${header}.${payload}`;
+      const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signingInput));
+      const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+      const fakeToken = `${signingInput}.${sigB64}`;
+
+      const result = await jwt.verify(fakeToken, SECRET_32);
+      expect(result.sub).toBe("user1");
+    });
   });
 
   describe("decode", () => {

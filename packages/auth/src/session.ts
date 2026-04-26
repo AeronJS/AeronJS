@@ -58,6 +58,13 @@ export interface SessionStore {
    * @param ttl 续期时长（秒）
    */
   touch(id: string, ttl: number): Promise<void>;
+
+  /**
+   * 删除指定用户的所有 Session
+   * @param userId 用户 ID
+   * @returns 删除的 Session 数量
+   */
+  deleteByUser?(userId: string): Promise<number>;
 }
 
 /**
@@ -97,6 +104,13 @@ export interface SessionManager {
    * @param id Session ID
    */
   touch(id: string): Promise<void>;
+
+  /**
+   * 销毁指定用户的所有 Session
+   * @param userId 用户 ID
+   * @returns 销毁的 Session 数量
+   */
+  destroyByUser(userId: string): Promise<number>;
 }
 
 /** 默认 Session TTL（秒） */
@@ -163,6 +177,9 @@ export function createSessionManager(
   const prefix = options.prefix ?? DEFAULT_PREFIX;
   const _cookieName = options.cookieName ?? DEFAULT_COOKIE_NAME;
 
+  // userId -> Set<sessionId> index for destroyByUser support
+  const userSessions = new Map<string, Set<string>>();
+
   /**
    * 为 Session ID 添加前缀
    * @param id 原始 Session ID
@@ -181,6 +198,18 @@ export function createSessionManager(
         expiresAt: Date.now() + ttl * 1000,
       };
       await store.set({ ...session, id: prefixedId(id), data: { ...data } });
+
+      // Track userId -> sessionId index
+      const userId = data.userId as string | undefined;
+      if (userId) {
+        let sessions = userSessions.get(userId);
+        if (!sessions) {
+          sessions = new Set();
+          userSessions.set(userId, sessions);
+        }
+        sessions.add(id);
+      }
+
       return session;
     },
 
@@ -199,10 +228,38 @@ export function createSessionManager(
 
     async destroy(id: string): Promise<void> {
       await store.delete(prefixedId(id));
+
+      // Remove from userSessions index
+      for (const [, sessionIds] of userSessions) {
+        if (sessionIds.has(id)) {
+          sessionIds.delete(id);
+          break;
+        }
+      }
     },
 
     async touch(id: string): Promise<void> {
       await store.touch(prefixedId(id), ttl);
+    },
+
+    async destroyByUser(userId: string): Promise<number> {
+      // If store supports deleteByUser natively, delegate to it
+      if (store.deleteByUser) {
+        return store.deleteByUser(userId);
+      }
+
+      const sessionIds = userSessions.get(userId);
+      if (!sessionIds || sessionIds.size === 0) {
+        return 0;
+      }
+
+      let count = 0;
+      for (const sessionId of sessionIds) {
+        await store.delete(prefixedId(sessionId));
+        count++;
+      }
+      userSessions.delete(userId);
+      return count;
     },
   };
 }

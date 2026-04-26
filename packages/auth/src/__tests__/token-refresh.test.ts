@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createJWT } from "../jwt";
 import { createTokenRefresh } from "../token-refresh";
+import { createMemoryRevocationStore } from "../token-revocation-store";
+import type { TokenRevocationStore } from "../token-revocation-store";
 
 const SECRET = "a]3Kf9$mPqR7wXyZ!bNcDe2GhJkLs5Tv"; // 32+ bytes
 const REFRESH_SECRET = "x9Y!kLm2NpQr3StUvWxYz4AbCdEfGhJk"; // separate 32+ bytes
@@ -99,5 +101,46 @@ describe("createTokenRefresh", () => {
     // Refresh should work
     const pair2 = await manager.refresh(pair.refreshToken, SECRET);
     expect(pair2.accessToken).toBeTruthy();
+  });
+
+  test("uses external revocation store", async () => {
+    const externalStore = createMemoryRevocationStore();
+    const manager = createTokenRefresh(jwt, {
+      revocationStore: externalStore,
+    });
+    const pair = await manager.generatePair({ sub: "user1" }, SECRET);
+    const refreshPayload = jwt.decode(pair.refreshToken)!;
+    await manager.revoke(refreshPayload.jti!);
+    expect(await manager.isRevoked(refreshPayload.jti!)).toBe(true);
+    await expect(manager.refresh(pair.refreshToken, SECRET)).rejects.toThrow(
+      "Token has been revoked",
+    );
+  });
+
+  test("revoked tokens persist across createTokenRefresh instances with same store", async () => {
+    const sharedStore = createMemoryRevocationStore();
+    const manager1 = createTokenRefresh(jwt, {
+      revocationStore: sharedStore,
+    });
+    const pair = await manager1.generatePair({ sub: "user1" }, SECRET);
+    const refreshPayload = jwt.decode(pair.refreshToken)!;
+    await manager1.revoke(refreshPayload.jti!);
+
+    // Create a new instance with the same store
+    const manager2 = createTokenRefresh(jwt, {
+      revocationStore: sharedStore,
+    });
+    expect(await manager2.isRevoked(refreshPayload.jti!)).toBe(true);
+    await expect(manager2.refresh(pair.refreshToken, SECRET)).rejects.toThrow(
+      "Token has been revoked",
+    );
+  });
+
+  test("default behavior without external store still works", async () => {
+    const manager = createTokenRefresh(jwt);
+    const pair = await manager.generatePair({ sub: "user1" }, SECRET);
+    const refreshPayload = jwt.decode(pair.refreshToken)!;
+    await manager.revoke(refreshPayload.jti!);
+    expect(await manager.isRevoked(refreshPayload.jti!)).toBe(true);
   });
 });

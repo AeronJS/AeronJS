@@ -143,6 +143,66 @@ describe("createSessionManager", () => {
       expect(fromStore).not.toBeNull();
     });
   });
+
+  describe("destroyByUser", () => {
+    test("destroys all sessions for a user", async () => {
+      const { manager } = setup();
+      await manager.create({ userId: "user1" });
+      await manager.create({ userId: "user1" });
+      await manager.create({ userId: "user2" });
+
+      const count = await manager.destroyByUser("user1");
+      expect(count).toBe(2);
+    });
+
+    test("returns correct count", async () => {
+      const { manager } = setup();
+      await manager.create({ userId: "user1" });
+      await manager.create({ userId: "user1" });
+      await manager.create({ userId: "user1" });
+
+      const count = await manager.destroyByUser("user1");
+      expect(count).toBe(3);
+    });
+
+    test("with no sessions returns 0", async () => {
+      const { manager } = setup();
+      const count = await manager.destroyByUser("nonexistent");
+      expect(count).toBe(0);
+    });
+
+    test("does not affect other users' sessions", async () => {
+      const { manager } = setup();
+      const s1 = await manager.create({ userId: "user1" });
+      await manager.create({ userId: "user1" });
+      const s3 = await manager.create({ userId: "user2" });
+
+      await manager.destroyByUser("user1");
+
+      // user2's session should still exist
+      const result = await manager.get(s3.id);
+      expect(result).not.toBeNull();
+
+      // user1's sessions should be gone
+      expect(await manager.get(s1.id)).toBeNull();
+    });
+
+    test("delegates to store.deleteByUser when available", async () => {
+      const store = createMemorySessionStore();
+      let deleteByUserCalled = false;
+      const storeWithDeleteByUser = {
+        ...store,
+        async deleteByUser(userId: string): Promise<number> {
+          deleteByUserCalled = true;
+          return 42;
+        },
+      };
+      const manager = createSessionManager(storeWithDeleteByUser);
+      const count = await manager.destroyByUser("user1");
+      expect(deleteByUserCalled).toBe(true);
+      expect(count).toBe(42);
+    });
+  });
 });
 
 describe("createMemorySessionStore", () => {

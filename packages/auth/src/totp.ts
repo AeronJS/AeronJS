@@ -54,6 +54,16 @@ export interface TOTPManager {
    * @returns 校验通过返回 true，否则返回 false
    */
   verify(secret: string, token: string, time?: number): Promise<boolean>;
+
+  /**
+   * 校验并消费 TOTP 验证码（防止重放攻击）
+   * 同一验证码在同一时间窗口内只能使用一次
+   * @param secret Base32 密钥
+   * @param token 用户输入的验证码
+   * @param time 可选的指定时间（秒级 Unix 时间戳），默认当前时间
+   * @returns 校验通过且未被使用返回 true，否则返回 false
+   */
+  verifyAndConsume(secret: string, token: string, time?: number): Promise<boolean>;
 }
 
 // Base32 (RFC 4648) A-Z2-7
@@ -130,6 +140,22 @@ export function createTOTP(options: TOTPOptions = {}): TOTPManager {
   const period = options.period ?? 30;
   const algorithm = options.algorithm ?? "SHA-1";
   const window = options.window ?? 1;
+
+  // Track consumed codes for replay protection: key = "hashOfSecret:counter", value = expiry timestamp
+  const consumedCodes = new Map<string, number>();
+
+  /**
+   * 对密钥进行 SHA-256 哈希，生成用于 consumedCodes key 的唯一标识
+   * @param secret Base32 密钥字符串
+   * @returns 十六进制哈希字符串
+   */
+  async function hashSecret(secret: string): Promise<string> {
+    const data = new TextEncoder().encode(secret);
+    const hash = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hash))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
 
   /**
    * 使用 HMAC-SHA 对数据签名
@@ -226,6 +252,54 @@ export function createTOTP(options: TOTPOptions = {}): TOTPManager {
       }
 
       return false;
+    },
+
+    async verifyAndConsume(secret: string, token: string, time?: number): Promise<boolean> {
+      const t = time ?? Math.floor(Date.now() / 1000);
+      const counter = Math.floor(t / period);
+      const secretBytes = base32Decode(secret);
+
+      // Find which counter matches
+      let matchedCounter: number | null = null;
+      for (let i = -window; i <= window; i++) {
+        const otp = await generateOTP(secretBytes, counter + i);
+        if (otp === token) {
+          matchedCounter = counter + i;
+          break;
+        }
+      }
+
+      if (matchedCounter === null) {
+        return false;
+      }
+
+      // Create a unique key for this (secret, counter) pair
+      const secretHash = await hashSecret(secret);
+      const key = `${secretHash}:${matchedCounter}`;
+
+      // Check if already consumed
+      const expiry = consumedCodes.get(key);
+      if (expiry !== undefined) {
+        if (expiry > Date.now()) {
+          return false; // Already used
+        }
+        // Clean up expired entry
+        consumedCodes.delete(key);
+      }
+
+      // Mark as consumed with expiry = period * (window + 1) seconds from now
+      const ttlMs = period * (window + 1) * 1000;
+      consumedCodes.set(key, Date.now() + ttlMs);
+
+      // Clean up other expired entries (lazy cleanup)
+      const now = Date.now();
+      for (const [k, v] of consumedCodes) {
+        if (v <= now) {
+          consumedCodes.delete(k);
+        }
+      }
+
+      return true;
     },
   };
 }

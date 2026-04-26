@@ -18,6 +18,8 @@ export interface TenantResolverOptions {
   headerName?: string;
   /** custom 策略下的自定义解析函数 */
   customResolver?: (req: Request) => string | null;
+  /** 异步租户校验函数，返回 false 表示拒绝访问 */
+  validateTenant?: (tenantId: string, ctx: Context) => Promise<boolean>;
 }
 
 /** 多租户中间件结果 */
@@ -106,6 +108,23 @@ export function createTenantMiddleware(options: TenantResolverOptions): TenantMi
     }
 
     ctx.tenant = { tenantId } satisfies TenantContext;
+
+    if (options.validateTenant) {
+      try {
+        const valid = await options.validateTenant(tenantId, ctx);
+        if (!valid) {
+          return new Response(JSON.stringify({ error: "Access denied to tenant" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      } catch {
+        return new Response(JSON.stringify({ error: "Internal server error" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
 
     const response = await next();
 

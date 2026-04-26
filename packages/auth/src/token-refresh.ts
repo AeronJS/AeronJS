@@ -5,6 +5,8 @@
  */
 
 import type { JWTManager, JWTPayload } from "./jwt";
+import type { TokenRevocationStore } from "./token-revocation-store";
+import { createMemoryRevocationStore } from "./token-revocation-store";
 
 /**
  * Token 对结构
@@ -31,6 +33,8 @@ export interface TokenRefreshOptions {
   refreshTokenTTL?: number;
   /** 可选的独立刷新令牌密钥，不传则使用 JWT 的 secret */
   refreshSecret?: string;
+  /** 外部吊销存储，不传则使用内存存储 */
+  revocationStore?: TokenRevocationStore;
 }
 
 /**
@@ -88,8 +92,7 @@ export function createTokenRefresh(
   const accessTTL = options.accessTokenTTL ?? DEFAULT_ACCESS_TTL;
   const refreshTTL = options.refreshTokenTTL ?? DEFAULT_REFRESH_TTL;
   const refreshSecret = options.refreshSecret;
-
-  const revokedJTIs = new Set<string>();
+  const revocationStore = options.revocationStore ?? createMemoryRevocationStore();
 
   /**
    * 根据载荷生成 Token 对
@@ -136,13 +139,13 @@ export function createTokenRefresh(
         throw new Error("Invalid token type: expected refresh token");
       }
 
-      if (decoded.jti && revokedJTIs.has(decoded.jti)) {
+      if (decoded.jti && await revocationStore.has(decoded.jti)) {
         throw new Error("Token has been revoked");
       }
 
       // Revoke the old refresh token
       if (decoded.jti) {
-        revokedJTIs.add(decoded.jti);
+        await revocationStore.add(decoded.jti, refreshTTL * 1000);
       }
 
       // Strip internal fields before generating new pair
@@ -152,11 +155,11 @@ export function createTokenRefresh(
     },
 
     async revoke(jti: string): Promise<void> {
-      revokedJTIs.add(jti);
+      await revocationStore.add(jti, refreshTTL * 1000);
     },
 
     async isRevoked(jti: string): Promise<boolean> {
-      return revokedJTIs.has(jti);
+      return revocationStore.has(jti);
     },
   };
 }

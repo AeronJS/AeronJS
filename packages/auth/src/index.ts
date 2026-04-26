@@ -56,6 +56,17 @@ export type {
   TokenRefreshOptions,
 } from "./token-refresh";
 
+/** Token 吊销存储 - 支持内存与 Redis 实现 */
+export { createMemoryRevocationStore, createRedisRevocationStore } from "./token-revocation-store";
+export type {
+  TokenRevocationStore,
+  RedisRevocationClientLike as RedisRevocationClientLike,
+} from "./token-revocation-store";
+
+/** 统一认证会话管理 - 聚合 Session、设备、Token 能力 */
+export { createAuthSessionManager } from "./auth-session";
+export type { AuthSessionManager } from "./auth-session";
+
 /** 基于属性的访问控制（ABAC）- 默认 deny，deny 优先于 allow */
 export { createABAC } from "./abac";
 export type { ABAC, Policy, PolicyCondition } from "./abac";

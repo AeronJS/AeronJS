@@ -14,6 +14,12 @@ export interface ScheduleOptions {
   interval?: number;
   /** 是否在注册时立即执行一次 */
   immediate?: boolean;
+  /** 任务执行前的钩子 */
+  onBeforeExecute?: (task: { name: string; scheduledAt: number }) => Promise<void>;
+  /** 任务执行成功后的钩子 */
+  onAfterExecute?: (task: { name: string; duration: number }) => Promise<void>;
+  /** 任务执行出错时的钩子 */
+  onError?: (task: { name: string; error: Error; duration: number }) => Promise<void>;
 }
 
 /** 已调度任务 */
@@ -110,10 +116,15 @@ export function createScheduler(): Scheduler {
 
     const safeHandler = async () => {
       if (!_running) return;
+      const start = Date.now();
       try {
+        if (options.onBeforeExecute) await options.onBeforeExecute({ name: options.name, scheduledAt: start });
         await handler();
-      } catch {
-        // Swallow — a single task error must not crash the scheduler.
+        const duration = Date.now() - start;
+        if (options.onAfterExecute) await options.onAfterExecute({ name: options.name, duration });
+      } catch (err) {
+        const duration = Date.now() - start;
+        if (options.onError) await options.onError({ name: options.name, error: err as Error, duration });
       }
     };
 
