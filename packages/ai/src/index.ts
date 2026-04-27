@@ -61,3 +61,35 @@ export type {
   /** 智能体注册表 */
   AgentRegistry,
 } from "./rag";
+
+export { loadDocumentsFromDirectory, parseMarkdownFrontmatter } from "./document-loader";
+export type {
+  /** 文档加载选项 */
+  DocumentLoaderOptions,
+  /** 加载结果 */
+  LoadResult,
+} from "./document-loader";
+
+export { createLLMClient } from "./llm";
+export type {
+  /** 聊天消息 */
+  ChatMessage,
+  /** LLM 客户端选项 */
+  LLMClientOptions,
+  /** LLM 客户端 */
+  LLMClient,
+} from "./llm";
+
+export { createRAGAgent } from "./rag-agent";
+export type {
+  /** RAG 智能体配置 */
+  RAGAgentConfig,
+  /** RAG 智能体依赖 */
+  RAGAgentDeps,
+  /** 检索来源 */
+  RAGSource,
+  /** RAG 对话结果 */
+  RAGChatResult,
+  /** RAG 智能体 */
+  RAGAgent,
+} from "./rag-agent";
