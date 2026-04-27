@@ -2,8 +2,14 @@ import starlight from '@astrojs/starlight'
 import { defineConfig } from 'astro/config'
 
 import cloudflare from '@astrojs/cloudflare';
+import node from '@astrojs/node';
+
+// 本地开发时可通过 SKIP_CF_ADAPTER=true 切换到 Node adapter，
+// 避免 wrangler 远程认证失败。部署时保持默认 Cloudflare adapter。
+const useCloudflare = process.env.SKIP_CF_ADAPTER !== 'true';
 
 export default defineConfig({
+  output: 'server',
   integrations: [
     starlight({
       title: 'VentoStack',
@@ -98,5 +104,5 @@ export default defineConfig({
     })
   ],
 
-  adapter: cloudflare()
+  adapter: useCloudflare ? cloudflare() : node({ mode: 'standalone' })
 })

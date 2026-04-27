@@ -5,10 +5,13 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
+    "dev:local": "SKIP_CF_ADAPTER=true astro dev",
     "start": "astro dev",
     "build": "bun run scripts/build-kb.ts && astro build",
+    "build:local": "bun run scripts/build-kb.ts && SKIP_CF_ADAPTER=true astro build",
     "build:kb": "bun run scripts/build-kb.ts",
     "preview": "astro preview",
+    "preview:local": "SKIP_CF_ADAPTER=true astro preview",
     "astro": "astro"
   },
   "dependencies": {
@@ -19,5 +22,8 @@
     "astro": "^6.0.0",
     "sharp": "^0.32.5",
     "wrangler": "^4.84.1"
+  },
+  "devDependencies": {
+    "@astrojs/node": "^10.0.6"
   }
 }
