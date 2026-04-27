@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom'
-import { Spin, ConfigProvider } from 'antd'
+import { Spin, ConfigProvider, App as AntApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { Suspense } from 'react'
 import { useRoutes } from 'react-router'
@@ -72,7 +72,9 @@ function App() {
           },
         }}
       >
-        {ready ? <_App /> : <Spin size="large" fullscreen />}
+        <AntApp>
+          {ready ? <_App /> : <Spin size="large" fullscreen />}
+        </AntApp>
       </ConfigProvider>
     </BrowserRouter>
   )

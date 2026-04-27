@@ -7,5 +7,5 @@ import App from './App'
 import { fetchConfig } from './store/config'
 
 fetchConfig().then(() => {
-  createRoot(document.getElementById('root')!).render(<App />)
+  createRoot(document.getElementById('app')!).render(<App />)
 })
