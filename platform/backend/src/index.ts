@@ -2,7 +2,8 @@
 /**
  * @ventostack/backend — 管理后台服务端
  *
- * 职责仅限于：生命周期管理、优雅关停、顶层错误边界。
+ * 职责仅限于：生命周期管理、顶层错误边界。
+ * 优雅关停由框架 createApp 内置的 SIGTERM/SIGINT 处理。
  * 业务装配逻辑全部委托给 app.ts（Composition Root）。
  *
  * 启动方式：
@@ -18,27 +19,28 @@ import { buildApp, type AppContext } from "./app";
 let appCtx: AppContext | null = null;
 
 async function main(): Promise<void> {
-  // =============================================
-  // 装配
-  // =============================================
-
   console.log("");
 
   appCtx = await buildApp();
 
-  // =============================================
-  // 启动
-  // =============================================
-
+  // 框架 createApp.listen() 内部注册了 SIGTERM/SIGINT 处理：
+  // 1. 设置 isClosing=true，新请求返回 503
+  // 2. 等待活跃请求最多 30 秒
+  // 3. 执行 lifecycle.onBeforeStop()
+  // 4. 关闭 HTTP 服务
+  // 5. process.exit(0)
   await appCtx.app.listen();
 
   console.log(`[server] Listening on http://${env.HOST}:${env.PORT}`);
   console.log(`[server] Environment: ${env.NODE_ENV}`);
+  console.log(`[server] API:       http://${env.HOST}:${env.PORT}/api`);
+  console.log(`[server] OpenAPI:   http://${env.HOST}:${env.PORT}/openapi.json`);
+  console.log(`[server] Docs:      http://${env.HOST}:${env.PORT}/docs`);
   console.log("");
 }
 
 // ===============================================
-// 顶层错误边界
+// 顶层错误边界 — 捕获启动阶段的不可恢复错误
 // ===============================================
 
 main().catch((err) => {
@@ -46,32 +48,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
-// ===============================================
-// 优雅关停
-// ===============================================
-
-const SHUTDOWN_SIGNALS = ["SIGTERM", "SIGINT", "SIGQUIT"] as const;
-
-for (const signal of SHUTDOWN_SIGNALS) {
-  process.on(signal, async () => {
-    console.log(`\n[server] Received ${signal}, shutting down gracefully...`);
-
-    // 移除所有信号处理器，防止重复触发
-    for (const s of SHUTDOWN_SIGNALS) {
-      process.removeAllListeners(s);
-    }
-
-    try {
-      if (appCtx) {
-        await appCtx.app.close();
-        // 关闭数据库连接等基础设施
-      }
-      console.log("[server] Shutdown complete");
-      process.exit(0);
-    } catch (err) {
-      console.error("[server] Shutdown error:", err);
-      process.exit(1);
-    }
-  });
-}

@@ -16,6 +16,7 @@
     "@ventostack/auth": "workspace:*",
     "@ventostack/observability": "workspace:*",
     "@ventostack/events": "workspace:*",
+    "@ventostack/openapi": "workspace:*",
     "@ventostack/system": "workspace:*"
   },
   "devDependencies": {

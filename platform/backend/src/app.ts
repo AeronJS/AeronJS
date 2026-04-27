@@ -12,6 +12,7 @@
 
 import { createApp, requestId, requestLogger } from "@ventostack/core";
 import type { VentoStackApp } from "@ventostack/core";
+import { setupOpenAPI } from "@ventostack/openapi";
 
 import { env } from "./config";
 import { createDatabaseConnection, runMigrations, runSeeds } from "./database";
@@ -91,13 +92,28 @@ export async function buildApp(): Promise<AppContext> {
   app.use(createCorsMiddleware());
   app.use(requestLogger());
 
-  // 4b. 健康检查端点（无需认证）
-  // 手动注册健康检查路由
+  // 4b. OpenAPI 文档（无需认证，必须在系统路由之前注册）
+  setupOpenAPI(app, {
+    info: { title: "VentoStack API", version: "0.1.0" },
+    servers: [{ url: `http://${env.HOST}:${env.PORT}`, description: env.NODE_ENV }],
+    jsonPath: "/openapi.json",
+    docsPath: "/docs",
+    securitySchemes: {
+      bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+    },
+  });
 
   // 4c. 系统模块路由
   app.use(system.router);
 
-  // 4d. 错误处理（必须最后注册）
+  // 4d. 注册优雅关停回调（框架收到 SIGTERM/SIGINT 时自动调用）
+  app.lifecycle.onBeforeStop(async () => {
+    console.log("[shutdown] Closing database...");
+    await database.close();
+    console.log("[shutdown] Database closed");
+  });
+
+  // 4e. 错误处理（必须最后注册）
   app.use(createErrorHandlerMiddleware({ logger }));
 
   // =============================================

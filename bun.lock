@@ -225,6 +225,7 @@
         "@ventostack/database": "workspace:*",
         "@ventostack/events": "workspace:*",
         "@ventostack/observability": "workspace:*",
+        "@ventostack/openapi": "workspace:*",
         "@ventostack/system": "workspace:*",
       },
       "devDependencies": {
