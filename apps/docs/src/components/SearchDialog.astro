@@ -59,12 +59,12 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 				<div class="ai-chat">
 					<div class="ai-messages"></div>
 					<div class="ai-input-area">
-						<input
-							type="text"
+						<textarea
 							class="ai-input"
 							placeholder="问关于 VentoStack 的问题..."
 							aria-label="Ask AI"
-						/>
+							rows="1"
+						></textarea>
 						<button class="ai-send" aria-label="发送">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<line x1="22" y1="2" x2="11" y2="13"></line>
@@ -96,6 +96,66 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 <script>
 	import { pagefindUserConfig } from 'virtual:starlight/pagefind-config';
 
+	/** 轻量 Markdown 渲染（支持常见格式） */
+	function renderMarkdown(text: string): string {
+		let html = text
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;');
+
+		// 代码块
+		html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>');
+		// 行内代码
+		html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+		// 加粗
+		html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+		// 斜体
+		html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+		// 删除线
+		html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+		// 标题
+		html = html.replace(/^###### (.+)$/gm, '<h6>$1</h6>');
+		html = html.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
+		html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+		html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+		html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+		html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+		// 链接
+		html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+		// 无序列表行
+		html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+		// 有序列表行
+		html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+		// 段落分割 + 列表包裹
+		const blocks = html.split(/\n\n+/);
+		const result: string[] = [];
+		let inList = false;
+
+		for (const block of blocks) {
+			const trimmed = block.trim();
+			if (!trimmed) continue;
+
+			if (trimmed.startsWith('<h') || trimmed.startsWith('<pre')) {
+				if (inList) { result.push('</ul>'); inList = false; }
+				result.push(trimmed);
+				continue;
+			}
+
+			if (trimmed.startsWith('<li')) {
+				if (!inList) { result.push('<ul>'); inList = true; }
+				result.push(trimmed);
+				continue;
+			}
+
+			if (inList) { result.push('</ul>'); inList = false; }
+			result.push(`<p>${trimmed.replace(/\n/g, '<br>')}</p>`);
+		}
+		if (inList) result.push('</ul>');
+
+		return result.join('');
+	}
+
 	class SiteSearch extends HTMLElement {
 		constructor() {
 			super();
@@ -118,7 +178,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			const openModal = (event?: MouseEvent) => {
 				dialog.showModal();
 				document.body.toggleAttribute('data-search-modal-open', true);
-				this.querySelector('input')?.focus();
+				this.querySelector('textarea')?.focus();
 				event?.stopPropagation();
 				window.addEventListener('click', onClick);
 			};
@@ -162,7 +222,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			} catch {}
 
 			const shouldStrip = this.dataset.stripTrailingSlash !== undefined;
-			const stripTrailingSlash = (path: string) => path.replace(/(.)\/(#.*)?$/, '$1$2');
+			const stripTrailingSlash = (path: string) => path.replace(/(.)/(#.*)?$/, '$1$2');
 			const formatURL = shouldStrip ? stripTrailingSlash : (path: string) => path;
 
 			window.addEventListener('DOMContentLoaded', () => {
@@ -191,12 +251,19 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			});
 
 			// Ask AI logic
-			const aiInput = this.querySelector<HTMLInputElement>('.ai-input');
+			const aiInput = this.querySelector<HTMLTextAreaElement>('.ai-input');
 			const aiSend = this.querySelector<HTMLButtonElement>('.ai-send');
 			const aiMessages = this.querySelector<HTMLDivElement>('.ai-messages');
 			const aiStatus = this.querySelector<HTMLDivElement>('.ai-status');
 
 			if (aiInput && aiSend && aiMessages) {
+				// textarea 自动高度
+				const autoResize = () => {
+					aiInput.style.height = 'auto';
+					aiInput.style.height = Math.min(aiInput.scrollHeight, 120) + 'px';
+				};
+				aiInput.addEventListener('input', autoResize);
+
 				const addMessage = (role: 'user' | 'assistant', content: string) => {
 					const msg = document.createElement('div');
 					msg.className = `ai-message ai-message--${role}`;
@@ -212,10 +279,15 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 
 					addMessage('user', text);
 					aiInput.value = '';
+					aiInput.style.height = 'auto';
 					aiSend.disabled = true;
 					if (aiStatus) aiStatus.textContent = '';
 
 					let assistantMsg: HTMLDivElement | null = null;
+					let reasoningEl: HTMLDetailsElement | null = null;
+					let contentEl: HTMLDivElement | null = null;
+					let reasoningText = '';
+					let contentText = '';
 					const thinkingMsg = addMessage('assistant', '思考中...');
 					thinkingMsg.classList.add('ai-message--thinking');
 
@@ -239,8 +311,10 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 							return;
 						}
 
+						// 收到流式响应，移除网络等待的 thinkingMsg
 						thinkingMsg.remove();
 						assistantMsg = addMessage('assistant', '');
+
 						const reader = response.body.getReader();
 						const decoder = new TextDecoder();
 						let buffer = '';
@@ -261,11 +335,41 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 								try {
 									const parsed = JSON.parse(data);
 									const delta = parsed.choices?.[0]?.delta;
-									const chunk = delta?.content ?? delta?.reasoning ?? '';
-									if (chunk && assistantMsg) {
-										assistantMsg.textContent += chunk;
-										aiMessages.scrollTop = aiMessages.scrollHeight;
+
+									// reasoning（思考过程）→ 可折叠面板
+									if (delta?.reasoning) {
+										reasoningText += delta.reasoning;
+										if (!reasoningEl && assistantMsg) {
+											reasoningEl = document.createElement('details');
+											reasoningEl.className = 'ai-reasoning';
+											const summary = document.createElement('summary');
+											summary.textContent = '思考过程';
+											reasoningEl.appendChild(summary);
+											const rc = document.createElement('div');
+											rc.className = 'ai-reasoning-text';
+											reasoningEl.appendChild(rc);
+											assistantMsg.appendChild(reasoningEl);
+										}
+										if (reasoningEl) {
+											const rc = reasoningEl.querySelector('.ai-reasoning-text') as HTMLDivElement;
+											if (rc) rc.textContent = reasoningText;
+										}
 									}
+
+									// content（正式回答）→ Markdown 渲染
+									if (delta?.content) {
+										contentText += delta.content;
+										if (!contentEl && assistantMsg) {
+											contentEl = document.createElement('div');
+											contentEl.className = 'ai-content';
+											assistantMsg.appendChild(contentEl);
+										}
+										if (contentEl) {
+											contentEl.innerHTML = renderMarkdown(contentText);
+										}
+									}
+
+									aiMessages.scrollTop = aiMessages.scrollHeight;
 								} catch {
 									// ignore malformed SSE lines
 								}
@@ -279,9 +383,34 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 								try {
 									const parsed = JSON.parse(data);
 									const delta = parsed.choices?.[0]?.delta;
-									const chunk = delta?.content ?? delta?.reasoning ?? '';
-									if (chunk && assistantMsg) {
-										assistantMsg.textContent += chunk;
+									if (delta?.reasoning) {
+										reasoningText += delta.reasoning;
+										if (!reasoningEl && assistantMsg) {
+											reasoningEl = document.createElement('details');
+											reasoningEl.className = 'ai-reasoning';
+											const summary = document.createElement('summary');
+											summary.textContent = '思考过程';
+											reasoningEl.appendChild(summary);
+											const rc = document.createElement('div');
+											rc.className = 'ai-reasoning-text';
+											reasoningEl.appendChild(rc);
+											assistantMsg.appendChild(reasoningEl);
+										}
+										if (reasoningEl) {
+											const rc = reasoningEl.querySelector('.ai-reasoning-text') as HTMLDivElement;
+											if (rc) rc.textContent = reasoningText;
+										}
+									}
+									if (delta?.content) {
+										contentText += delta.content;
+										if (!contentEl && assistantMsg) {
+											contentEl = document.createElement('div');
+											contentEl.className = 'ai-content';
+											assistantMsg.appendChild(contentEl);
+										}
+										if (contentEl) {
+											contentEl.innerHTML = renderMarkdown(contentText);
+										}
 									}
 								} catch {
 									// ignore
@@ -304,7 +433,10 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 
 				aiSend.addEventListener('click', sendMessage);
 				aiInput.addEventListener('keydown', (e) => {
-					if (e.key === 'Enter') sendMessage();
+					if (e.key === 'Enter' && !e.shiftKey) {
+						e.preventDefault();
+						sendMessage();
+					}
 				});
 			}
 		}
@@ -492,6 +624,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			flex-grow: 1;
 			gap: 1rem;
 			min-height: 0;
+			position: relative;
 		}
 		.ai-messages {
 			flex-grow: 1;
@@ -507,18 +640,19 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			max-width: 90%;
 			font-size: var(--sl-text-sm);
 			line-height: 1.6;
-			white-space: pre-wrap;
 			word-break: break-word;
 		}
 		.ai-message--user {
 			align-self: flex-end;
 			background-color: var(--sl-color-accent-low);
 			color: var(--sl-color-white);
+			white-space: pre-wrap;
 		}
 		.ai-message--assistant {
 			align-self: flex-start;
 			background-color: var(--sl-color-gray-5);
 			color: var(--sl-color-gray-1);
+			max-width: 100%;
 		}
 		.ai-message--thinking {
 			align-self: flex-start;
@@ -526,11 +660,88 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			color: var(--sl-color-gray-2);
 			font-style: italic;
 		}
+
+		/* Markdown content */
+		.ai-content {
+			line-height: 1.6;
+		}
+		.ai-content > *:first-child { margin-top: 0; }
+		.ai-content > *:last-child { margin-bottom: 0; }
+		.ai-content p { margin: 0.5rem 0; }
+		.ai-content h1, .ai-content h2, .ai-content h3, .ai-content h4, .ai-content h5, .ai-content h6 {
+			margin: 0.75rem 0 0.5rem;
+			font-size: var(--sl-text-base);
+			font-weight: 600;
+		}
+		.ai-content code {
+			background-color: var(--sl-color-gray-6);
+			padding: 0.125rem 0.25rem;
+			border-radius: 0.25rem;
+			font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+			font-size: 0.9em;
+		}
+		.ai-content pre {
+			background-color: var(--sl-color-gray-6);
+			padding: 0.75rem;
+			border-radius: 0.375rem;
+			overflow-x: auto;
+			margin: 0.5rem 0;
+		}
+		.ai-content pre code {
+			background-color: transparent;
+			padding: 0;
+		}
+		.ai-content a {
+			color: var(--sl-color-accent);
+			text-decoration: underline;
+		}
+		.ai-content ul, .ai-content ol {
+			margin: 0.5rem 0;
+			padding-left: 1.25rem;
+		}
+		.ai-content li { margin: 0.25rem 0; }
+		.ai-content strong { font-weight: 600; }
+		.ai-content em { font-style: italic; }
+		.ai-content del { text-decoration: line-through; opacity: 0.7; }
+		.ai-content br { display: block; content: ''; margin: 0.25rem 0; }
+
+		/* Reasoning panel */
+		.ai-reasoning {
+			margin-bottom: 0.75rem;
+			font-size: var(--sl-text-xs);
+			color: var(--sl-color-gray-2);
+			border: 1px solid var(--sl-color-gray-5);
+			border-radius: 0.375rem;
+			overflow: hidden;
+		}
+		.ai-reasoning summary {
+			cursor: pointer;
+			user-select: none;
+			padding: 0.375rem 0.75rem;
+			background-color: var(--sl-color-gray-6);
+			color: var(--sl-color-gray-2);
+			font-weight: 500;
+		}
+		.ai-reasoning summary:hover {
+			color: var(--sl-color-white);
+		}
+		.ai-reasoning-text {
+			padding: 0.5rem 0.75rem;
+			white-space: pre-wrap;
+			font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+			line-height: 1.5;
+			color: var(--sl-color-gray-2);
+			max-height: 12rem;
+			overflow-y: auto;
+		}
+
+		/* Input area */
 		.ai-input-area {
 			display: flex;
 			gap: 0.5rem;
 			padding-top: 0.5rem;
 			border-top: 1px solid var(--sl-color-gray-5);
+			align-items: flex-end;
 		}
 		.ai-input {
 			flex-grow: 1;
@@ -540,6 +751,11 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			background-color: var(--sl-color-black);
 			color: var(--sl-color-gray-1);
 			font-size: var(--sl-text-sm);
+			font-family: inherit;
+			resize: none;
+			min-height: 2.5rem;
+			max-height: 120px;
+			line-height: 1.5;
 		}
 		.ai-input:focus {
 			outline: none;
@@ -555,6 +771,9 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			background-color: var(--sl-color-accent);
 			color: var(--sl-color-white);
 			cursor: pointer;
+			height: 2.5rem;
+			width: 2.5rem;
+			flex-shrink: 0;
 		}
 		.ai-send:hover {
 			background-color: var(--sl-color-accent-high);
