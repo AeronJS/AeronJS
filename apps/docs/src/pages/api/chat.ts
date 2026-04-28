@@ -281,7 +281,7 @@ function parseToolCalls(text: string): { reasoning: string; toolCalls: ToolCall[
   return { reasoning, toolCalls };
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request }) => {
   let body: ChatRequest;
   try {
     body = (await request.json()) as ChatRequest;
@@ -300,7 +300,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  const env = locals as unknown as Record<string, unknown>;
+  // Astro v6 + Cloudflare adapter v13 中，locals 不再包含 Workers 绑定，
+  // 需通过 cloudflare:workers 获取；本地开发（Node adapter）时回退到外部 LLM。
+  let cfEnv: Record<string, unknown> = {};
+  try {
+    // @ts-expect-error cloudflare:workers 只在 Workers 运行时存在
+    const mod = await import("cloudflare:workers");
+    cfEnv = (mod.env ?? {}) as Record<string, unknown>;
+  } catch {
+    /* 本地开发或非 Workers 环境 */
+  }
+  const env = cfEnv;
   const hasWorkersAI = env.AI && typeof env.AI === "object";
   const encoder = new TextEncoder();
 
