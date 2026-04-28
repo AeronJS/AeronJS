@@ -10,7 +10,8 @@
 		"directory": "./dist"
 	},
 	"ai": {
-		"binding": "AI"
+		"binding": "AI",
+		"remote": true
 	},
 	"observability": {
 		"enabled": true
