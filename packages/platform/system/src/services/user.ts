@@ -87,6 +87,7 @@ export interface UserService {
   list(params: UserListParams): Promise<PaginatedResult<UserListItem>>;
   resetPassword(id: string, newPassword: string): Promise<void>;
   updateStatus(id: string, status: number): Promise<void>;
+  export(params?: UserListParams): Promise<string>;
 }
 
 /**
@@ -304,6 +305,64 @@ export function createUserService(deps: {
       // 清除缓存
       await cache.del(`user:detail:${id}`);
       await cache.del("user:list");
+    },
+
+    async export(params) {
+      const { username, status, deptId } = params ?? {};
+      const conditions: string[] = ["deleted_at IS NULL"];
+      const values: unknown[] = [];
+      let paramIndex = 1;
+
+      if (username) {
+        conditions.push(`username LIKE $${paramIndex}`);
+        values.push(`%${username}%`);
+        paramIndex++;
+      }
+      if (status !== undefined) {
+        conditions.push(`status = $${paramIndex}`);
+        values.push(status);
+        paramIndex++;
+      }
+      if (deptId) {
+        conditions.push(`dept_id = $${paramIndex}`);
+        values.push(deptId);
+        paramIndex++;
+      }
+
+      const whereClause = conditions.join(" AND ");
+      const rows = await executor(
+        `SELECT id, username, nickname, email, phone, status, dept_id, created_at, updated_at
+         FROM sys_user WHERE ${whereClause} ORDER BY created_at DESC`,
+        values,
+      );
+
+      const users = rows as Array<Record<string, unknown>>;
+
+      // 生成 CSV
+      const header = "ID,用户名,昵称,邮箱,手机,状态,部门ID,创建时间,更新时间";
+      const csvRows = users.map((row) => {
+        const escapeCsv = (val: unknown) => {
+          if (val === null || val === undefined) return "";
+          const str = String(val);
+          if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        };
+        return [
+          escapeCsv(row.id),
+          escapeCsv(row.username),
+          escapeCsv(row.nickname),
+          escapeCsv(row.email),
+          escapeCsv(row.phone),
+          escapeCsv(row.status),
+          escapeCsv(row.dept_id),
+          escapeCsv(row.created_at),
+          escapeCsv(row.updated_at),
+        ].join(",");
+      });
+
+      return [header, ...csvRows].join("\n");
     },
   };
 }

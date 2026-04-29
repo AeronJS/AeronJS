@@ -51,14 +51,33 @@ export function createAuthRoutes(
   });
 
   router.post("/api/auth/forgot-password", async (ctx) => {
-    const body = await parseBody(ctx.request);
-    return ok({ email: body.email });
+    try {
+      const body = await parseBody(ctx.request);
+      const email = body.email as string;
+      if (!email) return fail("Email is required", 400);
+      const result = await authService.forgotPassword(email);
+      return ok({ resetToken: result.resetToken });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Forgot password failed";
+      return fail(msg, 400);
+    }
   });
 
   router.post("/api/auth/reset-password", async (ctx) => {
     try {
       const body = await parseBody(ctx.request);
       await authService.resetPassword(body.userId as string, body.newPassword as string);
+      return ok(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Reset failed";
+      return fail(msg, 400);
+    }
+  });
+
+  router.post("/api/auth/reset-password-by-token", async (ctx) => {
+    try {
+      const body = await parseBody(ctx.request);
+      await authService.resetPasswordByToken(body.token as string, body.newPassword as string);
       return ok(null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Reset failed";

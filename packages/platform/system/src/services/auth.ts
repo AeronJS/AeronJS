@@ -11,6 +11,7 @@ import type { TOTPManager } from "@ventostack/auth";
 import type { AuthSessionManager } from "@ventostack/auth";
 import type { AuditStore } from "@ventostack/observability";
 import type { SqlExecutor } from "@ventostack/database";
+import type { EventBus } from "@ventostack/events";
 
 /** 登录结果 */
 export interface LoginResult {
@@ -55,6 +56,8 @@ export interface AuthService {
     email?: string;
     phone?: string;
   }): Promise<{ userId: string }>;
+  forgotPassword(email: string): Promise<{ resetToken: string }>;
+  resetPasswordByToken(token: string, newPassword: string): Promise<void>;
   resetPassword(userId: string, newPassword: string): Promise<void>;
   forceLogout(userId: string): Promise<{ sessions: number; devices: number }>;
   enableMFA(userId: string): Promise<MFASetupResult>;
@@ -71,6 +74,8 @@ const MAX_IP_REQUESTS_PER_MINUTE = 20;
 const IP_RATE_WINDOW = 60;
 /** MFA 临时 token 有效期（秒） */
 const MFA_TOKEN_TTL = 300;
+/** 密码重置 token 有效期（秒） */
+const RESET_TOKEN_TTL = 1800;
 
 /**
  * 创建认证服务实例
@@ -86,6 +91,7 @@ export function createAuthService(deps: {
   authSessionManager: AuthSessionManager;
   auditStore: AuditStore;
   jwtSecret: string;
+  eventBus: EventBus;
 }): AuthService {
   const {
     executor,
@@ -96,6 +102,7 @@ export function createAuthService(deps: {
     authSessionManager,
     auditStore,
     jwtSecret,
+    eventBus,
   } = deps;
 
   return {
@@ -303,6 +310,83 @@ export function createAuthService(deps: {
       });
 
       return { userId: id };
+    },
+
+    async forgotPassword(email) {
+      // 按 email 查找用户
+      const rows = await executor(
+        "SELECT id, username, email FROM sys_user WHERE email = $1 AND deleted_at IS NULL AND status = 1",
+        [email],
+      );
+      const users = rows as Array<{ id: string; username: string; email: string }>;
+
+      // 即使找不到用户也返回成功，防止邮箱枚举
+      if (users.length === 0) {
+        await auditStore.append({
+          actor: email,
+          action: "password.forgot",
+          resource: "auth",
+          result: "no_user",
+          metadata: { email },
+        });
+        // 返回一个无效 token，调用方无法区分
+        const dummyToken = crypto.randomUUID();
+        return { resetToken: dummyToken };
+      }
+
+      const user = users[0]!;
+      const resetToken = crypto.randomUUID();
+      const cacheKey = `pwd_reset:${resetToken}`;
+
+      // 将 token 存入缓存，关联 userId
+      await cache.set(cacheKey, user.id, { ttl: RESET_TOKEN_TTL });
+
+      await auditStore.append({
+        actor: user.id,
+        action: "password.forgot",
+        resource: "auth",
+        resourceId: user.id,
+        result: "success",
+        metadata: { email, username: user.username },
+      });
+
+      // 触发事件，通知层可监听并发送邮件
+      await eventBus.emit("auth.password.reset_requested", {
+        userId: user.id,
+        email,
+        username: user.username,
+        resetToken,
+        expiresIn: RESET_TOKEN_TTL,
+      });
+
+      return { resetToken };
+    },
+
+    async resetPasswordByToken(token, newPassword) {
+      const cacheKey = `pwd_reset:${token}`;
+      const userId = await cache.get<string>(cacheKey);
+
+      if (!userId) {
+        throw new Error("Invalid or expired reset token");
+      }
+
+      const passwordHash = await passwordHasher.hash(newPassword);
+
+      await executor(
+        "UPDATE sys_user SET password_hash = $1, updated_at = NOW() WHERE id = $2",
+        [passwordHash, userId],
+      );
+
+      // 删除已使用的 token
+      await cache.del(cacheKey);
+
+      await auditStore.append({
+        actor: "system",
+        action: "password.reset_by_token",
+        resource: "user",
+        resourceId: userId,
+        result: "success",
+      });
     },
 
     async resetPassword(userId, newPassword) {

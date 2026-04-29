@@ -97,6 +97,21 @@ export function createSystemModule(deps: SystemModuleDeps): SystemModule {
     service: roleService,
     authMiddleware,
     perm,
+    extraRoutes: (r) => {
+      r.put("/api/system/roles/:id/menus", perm("system", "role:update"), async (ctx) => {
+        const id = (ctx.params as Record<string, string>).id;
+        const body = await parseBody(ctx.request);
+        const menuIds = (body.menuIds as string[]) ?? [];
+        await roleService.assignMenus(id, menuIds);
+        return ok(null);
+      });
+      r.put("/api/system/roles/:id/data-scope", perm("system", "role:update"), async (ctx) => {
+        const id = (ctx.params as Record<string, string>).id;
+        const body = await parseBody(ctx.request);
+        await roleService.assignDataScope(id, body.scope as number, body.deptIds as string[] | undefined);
+        return ok(null);
+      });
+    },
   }));
 
   router.merge(createCrudRoutes({
@@ -176,6 +191,14 @@ export function createSystemModule(deps: SystemModuleDeps): SystemModule {
     service: { ...configService, update: (key: string, body: any) => configService.update(key, body) },
     authMiddleware,
     perm,
+    extraRoutes: (r) => {
+      r.get("/api/system/configs/by-key/:key", perm("system", "config:query"), async (ctx) => {
+        const key = (ctx.params as Record<string, string>).key;
+        const value = await configService.getValue(key);
+        if (value === null) return fail("Config not found", 404, 404);
+        return ok({ key, value });
+      });
+    },
   }));
 
   router.merge(createCrudRoutes({

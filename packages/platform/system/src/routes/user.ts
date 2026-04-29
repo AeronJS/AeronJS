@@ -74,5 +74,25 @@ export function createUserRoutes(
     return ok(null);
   });
 
+  router.post("/api/system/users/export", perm("system", "user:list"), async (ctx) => {
+    try {
+      const body = await parseBody(ctx.request);
+      const csv = await userService.export({
+        username: body.username as string | undefined,
+        status: body.status as number | undefined,
+        deptId: body.deptId as string | undefined,
+      });
+      return new Response(csv, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": "attachment; filename=users.csv",
+        },
+      });
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : "Export failed", 400);
+    }
+  });
+
   return router;
 }
