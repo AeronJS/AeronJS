@@ -558,10 +558,11 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			};
 
 			try {
-				const history = loadHistory().slice(-20).map((h) => ({
-					role: h.role,
-					content: h.content,
-				}));
+				const rawHistory = loadHistory().slice(-20);
+				// 排除最后一条 user 消息：它等同于当前 message，避免后端重复
+				const history = rawHistory.length > 0 && rawHistory[rawHistory.length - 1].role === 'user'
+					? rawHistory.slice(0, -1).map((h) => ({ role: h.role, content: h.content }))
+					: rawHistory.map((h) => ({ role: h.role, content: h.content }));
 
 				const response = await fetch('/api/chat', {
 					method: 'POST',
@@ -609,37 +610,83 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 							const parsed = JSON.parse(data);
 
 							// tool_call
-							if (parsed.tool_call && assistantMsg && ++toolCallCount <= 3) {
+							if (parsed.type === 'tool_call' && parsed.tool && assistantMsg && ++toolCallCount <= 3) {
 								if (!toolsEl) {
 									toolsEl = document.createElement('div');
 									toolsEl.className = 'ai-tools';
 									assistantMsg.appendChild(toolsEl);
 								}
-								const toolEl = document.createElement('div');
-								toolEl.className = 'ai-tool ai-tool--running';
-								const query = parsed.tool_call.arguments?.query || '';
+								const tool = parsed.tool as { name: string; arguments: Record<string, unknown> };
+								const query = String(tool.arguments?.query || '');
 								const shortQ = query.length > 40 ? query.slice(0, 40) + '...' : query;
-								toolEl.innerHTML = `<span class="ai-tool-spinner"></span><span class="ai-tool-name">${parsed.tool_call.name}</span>${shortQ ? `<span class="ai-tool-args">${shortQ}</span>` : ''}`;
+
+								const toolEl = document.createElement('details');
+								toolEl.className = 'ai-tool ai-tool--running';
+								const summary = document.createElement('summary');
+								summary.className = 'ai-tool-summary';
+								summary.innerHTML = `<span class="ai-tool-spinner"></span><span class="ai-tool-name">${tool.name}</span>${shortQ ? `<span class="ai-tool-args">${shortQ}</span>` : ''}`;
+								toolEl.appendChild(summary);
+
+								const detail = document.createElement('div');
+								detail.className = 'ai-tool-detail';
+								detail.innerHTML = `<pre>${JSON.stringify(tool.arguments, null, 2)}</pre>`;
+								toolEl.appendChild(detail);
+
 								toolsEl.appendChild(toolEl);
-								toolElements.set(parsed.tool_call.name + '_' + toolCallCount, toolEl);
+								toolElements.set(tool.name + '_' + toolCallCount, toolEl);
 							}
 
 							// tool_result
-							if (parsed.tool_result && assistantMsg) {
+							if (parsed.type === 'tool_result' && assistantMsg) {
 								let el: HTMLDivElement | null = null;
 								for (const [key, val] of toolElements) {
-									if (key.startsWith(parsed.tool_result.name + '_')) el = val;
+									if (key.startsWith(parsed.toolName + '_')) el = val;
 								}
 								if (el) {
 									el.className = 'ai-tool ai-tool--done';
-									const result = parsed.tool_result.result as { found?: number; count?: number };
+									const result = parsed.result as { found?: number; count?: number };
 									const count = result?.found ?? result?.count ?? 0;
-									el.innerHTML = `<span class="ai-tool-icon">&#10003;</span><span class="ai-tool-name">${parsed.tool_result.name}</span><span class="ai-tool-status">${count} 条结果</span>`;
+									const summary = el.querySelector('.ai-tool-summary');
+									if (summary) {
+										summary.innerHTML = `<span class="ai-tool-icon">&#10003;</span><span class="ai-tool-name">${parsed.toolName}</span><span class="ai-tool-status">${count} 条结果</span>`;
+									}
+									const detail = el.querySelector('.ai-tool-detail');
+									if (detail) {
+										detail.innerHTML += `<div class="ai-tool-result"><strong>结果:</strong><pre>${JSON.stringify(parsed.result, null, 2)}</pre></div>`;
+									}
 								}
 							}
 
-							// reasoning（思考过程）→ 可展开/收起的面板，带 loading spinner
+
+							// reasoning（来自后端一次性推送）
+							if (parsed.type === 'reasoning' && parsed.content && assistantMsg) {
+								reasoningText += parsed.content;
+								if (!reasoningEl) {
+									reasoningEl = document.createElement('details');
+									reasoningEl.className = 'ai-reasoning';
+									(reasoningEl as HTMLDetailsElement).open = true;
+									const summary = document.createElement('summary');
+									summary.className = 'ai-reasoning-header';
+									summary.innerHTML = '<span class="ai-reasoning-spinner"></span>思考过程';
+									reasoningEl.appendChild(summary);
+									const rc = document.createElement('div');
+									rc.className = 'ai-reasoning-text';
+									reasoningEl.appendChild(rc);
+									assistantMsg.appendChild(reasoningEl);
+								}
+								if (reasoningEl) {
+									const rc = reasoningEl.querySelector('.ai-reasoning-text') as HTMLDivElement;
+									if (rc) {
+										rc.textContent = reasoningText;
+										if ((reasoningEl as HTMLDetailsElement).open) {
+											rc.scrollTop = rc.scrollHeight;
+										}
+									}
+								}
+							}
 							const delta = parsed.choices?.[0]?.delta;
+
+							// reasoning（思考过程）
 							if (delta?.reasoning) {
 								reasoningText += delta.reasoning;
 								if (!reasoningEl && assistantMsg) {
@@ -656,7 +703,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 									assistantMsg.appendChild(reasoningEl);
 								}
 								if (reasoningEl) {
-									const rc = reasoningEl.querySelector('.u0061u0069u002du0072u0065u0061u0073u006fu006eu0069u006eu0067u002du0074u0065u0078u0074') as HTMLDivElement;
+									const rc = reasoningEl.querySelector('.ai-reasoning-text') as HTMLDivElement;
 									if (rc) {
 										rc.textContent = reasoningText;
 										if ((reasoningEl as HTMLDetailsElement).open) {
@@ -665,7 +712,6 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 									}
 								}
 							}
-
 							// content（正式回答）→ Markdown 渲染
 							if (delta?.content) {
 								contentText += delta.content;
@@ -714,35 +760,82 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 						try {
 							const parsed = JSON.parse(data);
 
-							if (parsed.tool_call && assistantMsg && ++toolCallCount <= 3) {
+							if (parsed.type === 'tool_call' && parsed.tool && assistantMsg && ++toolCallCount <= 3) {
 								if (!toolsEl) {
 									toolsEl = document.createElement('div');
 									toolsEl.className = 'ai-tools';
 									assistantMsg.appendChild(toolsEl);
 								}
-								const toolEl = document.createElement('div');
-								toolEl.className = 'ai-tool ai-tool--running';
-								const query = parsed.tool_call.arguments?.query || '';
+								const tool = parsed.tool as { name: string; arguments: Record<string, unknown> };
+								const query = String(tool.arguments?.query || '');
 								const shortQ = query.length > 40 ? query.slice(0, 40) + '...' : query;
-								toolEl.innerHTML = `<span class="ai-tool-spinner"></span><span class="ai-tool-name">${parsed.tool_call.name}</span>${shortQ ? `<span class="ai-tool-args">${shortQ}</span>` : ''}`;
+
+								const toolEl = document.createElement('details');
+								toolEl.className = 'ai-tool ai-tool--running';
+								const summary = document.createElement('summary');
+								summary.className = 'ai-tool-summary';
+								summary.innerHTML = `<span class="ai-tool-spinner"></span><span class="ai-tool-name">${tool.name}</span>${shortQ ? `<span class="ai-tool-args">${shortQ}</span>` : ''}`;
+								toolEl.appendChild(summary);
+
+								const detail = document.createElement('div');
+								detail.className = 'ai-tool-detail';
+								detail.innerHTML = `<pre>${JSON.stringify(tool.arguments, null, 2)}</pre>`;
+								toolEl.appendChild(detail);
+
 								toolsEl.appendChild(toolEl);
-								toolElements.set(parsed.tool_call.name + '_' + toolCallCount, toolEl);
+								toolElements.set(tool.name + '_' + toolCallCount, toolEl);
 							}
 
-							if (parsed.tool_result && assistantMsg) {
+							if (parsed.type === 'tool_result' && assistantMsg) {
 								let el: HTMLDivElement | null = null;
 								for (const [key, val] of toolElements) {
-									if (key.startsWith(parsed.tool_result.name + '_')) el = val;
+									if (key.startsWith(parsed.toolName + '_')) el = val;
 								}
 								if (el) {
 									el.className = 'ai-tool ai-tool--done';
-									const result = parsed.tool_result.result as { found?: number; count?: number };
+									const result = parsed.result as { found?: number; count?: number };
 									const count = result?.found ?? result?.count ?? 0;
-									el.innerHTML = `<span class="ai-tool-icon">&#10003;</span><span class="ai-tool-name">${parsed.tool_result.name}</span><span class="ai-tool-status">${count} 条结果</span>`;
+									const summary = el.querySelector('.ai-tool-summary');
+									if (summary) {
+										summary.innerHTML = `<span class="ai-tool-icon">&#10003;</span><span class="ai-tool-name">${parsed.toolName}</span><span class="ai-tool-status">${count} 条结果</span>`;
+									}
+									const detail = el.querySelector('.ai-tool-detail');
+									if (detail) {
+										detail.innerHTML += `<div class="ai-tool-result"><strong>结果:</strong><pre>${JSON.stringify(parsed.result, null, 2)}</pre></div>`;
+									}
 								}
 							}
 
+
+							// reasoning（来自后端一次性推送）
+							if (parsed.type === 'reasoning' && parsed.content && assistantMsg) {
+								reasoningText += parsed.content;
+								if (!reasoningEl) {
+									reasoningEl = document.createElement('details');
+									reasoningEl.className = 'ai-reasoning';
+									(reasoningEl as HTMLDetailsElement).open = true;
+									const summary = document.createElement('summary');
+									summary.className = 'ai-reasoning-header';
+									summary.innerHTML = '<span class="ai-reasoning-spinner"></span>思考过程';
+									reasoningEl.appendChild(summary);
+									const rc = document.createElement('div');
+									rc.className = 'ai-reasoning-text';
+									reasoningEl.appendChild(rc);
+									assistantMsg.appendChild(reasoningEl);
+								}
+								if (reasoningEl) {
+									const rc = reasoningEl.querySelector('.ai-reasoning-text') as HTMLDivElement;
+									if (rc) {
+										rc.textContent = reasoningText;
+										if ((reasoningEl as HTMLDetailsElement).open) {
+											rc.scrollTop = rc.scrollHeight;
+										}
+									}
+								}
+							}
 							const delta = parsed.choices?.[0]?.delta;
+
+							// reasoning（思考过程）
 							if (delta?.reasoning) {
 								reasoningText += delta.reasoning;
 								if (!reasoningEl && assistantMsg) {
@@ -759,7 +852,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 									assistantMsg.appendChild(reasoningEl);
 								}
 								if (reasoningEl) {
-									const rc = reasoningEl.querySelector('.u0061u0069u002du0072u0065u0061u0073u006fu006eu0069u006eu0067u002du0074u0065u0078u0074') as HTMLDivElement;
+									const rc = reasoningEl.querySelector('.ai-reasoning-text') as HTMLDivElement;
 									if (rc) {
 										rc.textContent = reasoningText;
 										if ((reasoningEl as HTMLDetailsElement).open) {
@@ -1127,6 +1220,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			margin-bottom: 0.75rem;
 			font-size: var(--sl-text-xs);
 			color: var(--sl-color-gray-2);
+			background-color: var(--sl-color-gray-6);
 			border: 1px solid var(--sl-color-gray-5);
 			border-radius: 0.375rem;
 			overflow: hidden;
@@ -1136,7 +1230,6 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			align-items: center;
 			gap: 0.5rem;
 			padding: 0.375rem 0.75rem;
-			background-color: var(--sl-color-gray-6);
 			color: var(--sl-color-gray-2);
 			font-weight: 500;
 			font-size: var(--sl-text-xs);
@@ -1197,13 +1290,38 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			margin-bottom: 0.75rem;
 		}
 		.ai-tool {
+			font-size: var(--sl-text-xs);
+			border: 1px solid var(--sl-color-gray-5);
+			border-radius: 0.375rem;
+			overflow: hidden;
+		}
+		.ai-tool-summary {
 			display: flex;
 			align-items: center;
 			gap: 0.5rem;
 			padding: 0.375rem 0.75rem;
-			border-radius: 0.375rem;
-			font-size: var(--sl-text-xs);
-			border: 1px solid var(--sl-color-gray-5);
+			cursor: pointer;
+			user-select: none;
+			list-style: none;
+		}
+		.ai-tool-summary::-webkit-details-marker {
+			display: none;
+		}
+		.ai-tool-detail {
+			padding: 0.5rem 0.75rem;
+			background-color: var(--sl-color-gray-6);
+			border-top: 1px solid var(--sl-color-gray-5);
+		}
+		.ai-tool-detail pre {
+			margin: 0;
+			font-size: 0.75rem;
+			white-space: pre-wrap;
+			word-break: break-word;
+		}
+		.ai-tool-result {
+			margin-top: 0.5rem;
+			padding-top: 0.5rem;
+			border-top: 1px solid var(--sl-color-gray-5);
 		}
 		.ai-tool--running {
 			background-color: var(--sl-color-gray-6);

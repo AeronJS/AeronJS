@@ -5,7 +5,17 @@ export interface PaginatedData<T> {
   total: number
   page: number
   pageSize: number
+  totalPages?: number
 }
+
+export interface PaginatedParams {
+  page?: number
+  pageSize?: number
+  [key: string]: unknown
+}
+
+export type CreateNoticeBody = { title: string; content: string; type?: number }
+export type UpdateNoticeBody = { title?: string; content?: string; type?: number }
 
 export interface UserItem {
   id: string; username: string; nickname: string; email: string; phone: string

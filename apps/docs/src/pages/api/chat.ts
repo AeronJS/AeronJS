@@ -104,14 +104,17 @@ function createSSEStream(text: string): ReadableStream {
   });
 }
 
-/** 精简 SSE 事件：只保留 delta.content / delta.reasoning */
-function stripSSEPayload(raw: string): string {
+/** 精简 SSE 事件：只保留 delta.content / delta.reasoning，空 delta 返回 null */
+function stripSSEPayload(raw: string): string | null {
   try {
     const parsed = JSON.parse(raw);
     const delta = parsed.choices?.[0]?.delta;
     const stripped: Record<string, unknown> = {};
     if (delta?.content !== undefined) stripped.content = delta.content;
+    // OpenAI reasoning 模型字段为 reasoning_content，统一映射为 reasoning
+    if (delta?.reasoning_content !== undefined) stripped.reasoning = delta.reasoning_content;
     if (delta?.reasoning !== undefined) stripped.reasoning = delta.reasoning;
+    if (Object.keys(stripped).length === 0) return null;
     return JSON.stringify({ choices: [{ delta: stripped }] });
   } catch {
     return raw;
@@ -178,9 +181,11 @@ async function callExternalLLMStreamRaw(
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             } else {
               const stripped = stripSSEPayload(data);
-              controller.enqueue(
-                encoder.encode(`data: ${stripped}\n\n`),
-              );
+              if (stripped !== null) {
+                controller.enqueue(
+                  encoder.encode(`data: ${stripped}\n\n`),
+                );
+              }
             }
           }
         }
@@ -191,9 +196,11 @@ async function callExternalLLMStreamRaw(
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           } else if (dataMatch) {
             const stripped = stripSSEPayload(dataMatch[1]);
-            controller.enqueue(
-              encoder.encode(`data: ${stripped}\n\n`),
-            );
+            if (stripped !== null) {
+              controller.enqueue(
+                encoder.encode(`data: ${stripped}\n\n`),
+              );
+            }
           }
         }
       } finally {
@@ -318,9 +325,16 @@ export const POST: APIRoute = async ({ request }) => {
     async start(controller) {
       try {
         // 构造对话上下文（最近 4 条 + 当前消息）
+        // 防御：如果 history 最后一条是 user 且与当前 message 重复（前端未去重时），跳过
         const recentHistory = history.slice(-4);
+        const dedupedHistory =
+          recentHistory.length > 0 &&
+          recentHistory[recentHistory.length - 1].role === "user" &&
+          recentHistory[recentHistory.length - 1].content === message
+            ? recentHistory.slice(0, -1)
+            : recentHistory;
         const conversationMessages = [
-          ...recentHistory.map((h) => ({
+          ...dedupedHistory.map((h) => ({
             role: h.role,
             content: h.content,
           })),
@@ -382,10 +396,12 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         const { reasoning, toolCalls } = parseToolCalls(planningText);
+
+        // 发送 reasoning（思考过程）
         if (reasoning) {
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ choices: [{ delta: { reasoning } }] })}\n\n`,
+              `data: ${JSON.stringify({ type: "reasoning", content: reasoning })}\n\n`,
             ),
           );
         }
@@ -395,16 +411,16 @@ export const POST: APIRoute = async ({ request }) => {
         const allSources: Array<{ title: string; url: string }> = [];
 
         for (const tc of toolCalls.slice(0, 1)) {
-          const toolCallData = JSON.stringify({ tool_call: tc });
-          controller.enqueue(encoder.encode(`data: ${toolCallData}\n\n`));
+          // 发送 tool_call 事件（前端可点击展开查看参数）
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ type: "tool_call", tool: tc })}\n\n`,
+            ),
+          );
 
           if (tc.name === "search_documents") {
             const query = String(tc.arguments.query || "");
             const searchResult = await executeSearchDocuments(query);
-            const result = {
-              found: searchResult.sources.length,
-              sources: searchResult.sources,
-            };
             allSources.push(...searchResult.sources);
             toolResultMessages.push({
               role: "user",
@@ -413,28 +429,43 @@ export const POST: APIRoute = async ({ request }) => {
                 searchResult.context,
             });
 
-            const toolResultData = JSON.stringify({
-              tool_result: { name: tc.name, result },
-            });
-            controller.enqueue(encoder.encode(`data: ${toolResultData}\n\n`));
+            // 发送 tool_result 事件
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "tool_result",
+                  toolName: tc.name,
+                  result: {
+                    found: searchResult.sources.length,
+                    sources: searchResult.sources,
+                  },
+                })}\n\n`,
+              ),
+            );
           } else {
-            const toolResultData = JSON.stringify({
-              tool_result: { name: tc.name, result: { error: "未知工具" } },
-            });
-            controller.enqueue(encoder.encode(`data: ${toolResultData}\n\n`));
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "tool_result",
+                  toolName: tc.name,
+                  result: { error: "未知工具" },
+                })}\n\n`,
+              ),
+            );
           }
         }
 
         // ===== Phase 3: 生成最终答案 =====
         const answerSystemPrompt =
-          "你是 VentoStack 框架的技术文档助手。请严格基于提供的文档片段和工具结果回答用户问题。" +
+          "你是 VentoStack 框架的技术文档助手。VentoStack 是一个基于 Bun 运行时的全栈框架，不基于 Node.js。" +
+          "请严格基于提供的文档片段和工具结果回答用户问题。" +
           "如果文档中没有相关信息，明确告知用户。不要编造信息。回答应简洁、准确，使用中文。\n\n" +
           "引用规范：当信息来自某个文档片段时，请在回答中使用 Markdown 链接格式标注来源，例如：[文件存储概述](/platform/oss/overview/)。\n\n" +
           "代码规范：当问题涉及 API 使用、配置或实现时，尽量直接给出可运行的参考代码示例，而不仅仅是文字描述。";
 
         const finalMessages = [
           { role: "system" as const, content: answerSystemPrompt },
-          ...recentHistory.slice(-2).map((h) => ({
+          ...dedupedHistory.slice(-2).map((h) => ({
             role: h.role,
             content: h.content,
           })),
