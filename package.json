@@ -5,9 +5,11 @@
     "type": "git",
     "url": "git+https://github.com/Ventorium/VentoStack.git"
   },
-  "workspaces": ["packages/framework/*", "packages/platform/*", "packages/gui/*", "apps/*", "apps/admin/*"],
+  "workspaces": ["packages/framework/*", "packages/platform/*", "packages/gui", "apps/*", "apps/admin/*"],
   "scripts": {
     "dev": "bun --hot apps/example/src/main.ts",
+    "dev:admin": "bun run --cwd apps/admin/api dev",
+    "dev:admin:web": "bun run --cwd apps/admin/web dev",
     "dev:doc": "bun run --cwd apps/docs dev",
     "build": "bun run packages/framework/cli/src/build.ts",
     "build:doc": "bun run --cwd apps/docs build",
