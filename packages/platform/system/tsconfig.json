@@ -18,12 +18,12 @@
     "outDir": "dist",
     "rootDir": "src",
     "paths": {
-      "@ventostack/core": ["../../../core/src/index.ts"],
-      "@ventostack/database": ["../../../database/src/index.ts"],
-      "@ventostack/cache": ["../../../cache/src/index.ts"],
-      "@ventostack/auth": ["../../../auth/src/index.ts"],
-      "@ventostack/events": ["../../../events/src/index.ts"],
-      "@ventostack/observability": ["../../../observability/src/index.ts"]
+      "@ventostack/core": ["../../../framework/core/src/index.ts"],
+      "@ventostack/database": ["../../../framework/database/src/index.ts"],
+      "@ventostack/cache": ["../../../framework/cache/src/index.ts"],
+      "@ventostack/auth": ["../../../platform/auth/src/index.ts"],
+      "@ventostack/events": ["../../../framework/events/src/index.ts"],
+      "@ventostack/observability": ["../../../framework/observability/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"],

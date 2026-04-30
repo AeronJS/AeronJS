@@ -11,24 +11,8 @@
         "typescript": "^5.8",
       },
     },
-    "apps/docs": {
-      "name": "@ventostack/docs",
-      "version": "0.0.2",
-      "dependencies": {
-        "@astrojs/cloudflare": "^13.2.2",
-        "@astrojs/starlight": "^0.38.3",
-        "@pagefind/default-ui": "^1.3.0",
-        "@ventostack/ai": "workspace:*",
-        "astro": "^6.0.0",
-        "sharp": "^0.32.5",
-        "wrangler": "^4.84.1",
-      },
-      "devDependencies": {
-        "@astrojs/node": "^10.0.6",
-      },
-    },
-    "apps/example": {
-      "name": "ventostack-example",
+    "apps/admin/api": {
+      "name": "@ventostack/backend",
       "version": "0.1.0",
       "dependencies": {
         "@ventostack/auth": "workspace:*",
@@ -37,152 +21,14 @@
         "@ventostack/database": "workspace:*",
         "@ventostack/events": "workspace:*",
         "@ventostack/observability": "workspace:*",
+        "@ventostack/openapi": "workspace:*",
+        "@ventostack/system": "workspace:*",
       },
       "devDependencies": {
-        "@ventostack/testing": "workspace:*",
-        "bun-types": "latest",
+        "typescript": "~6.0.2",
       },
     },
-    "packages/ai": {
-      "name": "@ventostack/ai",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-        "ajv": "^8.18.0",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-      },
-    },
-    "packages/auth": {
-      "name": "@ventostack/auth",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/cache": "workspace:*",
-        "@ventostack/core": "workspace:*",
-        "@ventostack/database": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/cache": {
-      "name": "@ventostack/cache",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/cli": {
-      "name": "@ventostack/cli",
-      "version": "0.1.0",
-      "bin": {
-        "ventostack": "src/index.ts",
-      },
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-        "@ventostack/database": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/core": {
-      "name": "@ventostack/core",
-      "version": "0.1.0",
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/database": {
-      "name": "@ventostack/database",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/events": {
-      "name": "@ventostack/events",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/integration": {
-      "name": "@ventostack/integration",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/webhook": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/observability": {
-      "name": "@ventostack/observability",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/openapi": {
-      "name": "@ventostack/openapi",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-      },
-    },
-    "packages/platform/system": {
-      "name": "@ventostack/system",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/auth": "workspace:*",
-        "@ventostack/cache": "workspace:*",
-        "@ventostack/core": "workspace:*",
-        "@ventostack/database": "workspace:*",
-        "@ventostack/events": "workspace:*",
-        "@ventostack/observability": "workspace:*",
-      },
-      "devDependencies": {
-        "@ventostack/testing": "workspace:*",
-      },
-    },
-    "packages/testing": {
-      "name": "@ventostack/testing",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "packages/webhook": {
-      "name": "@ventostack/webhook",
-      "version": "0.1.0",
-      "dependencies": {
-        "@ventostack/core": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-      },
-    },
-    "platform/admin": {
+    "apps/admin/web": {
       "name": "@ventostack/admin",
       "version": "0.1.0",
       "dependencies": {
@@ -220,8 +66,24 @@
         "vite-plugin-svgr": "^5.2.0",
       },
     },
-    "platform/backend": {
-      "name": "@ventostack/backend",
+    "apps/docs": {
+      "name": "@ventostack/docs",
+      "version": "0.0.2",
+      "dependencies": {
+        "@astrojs/cloudflare": "^13.2.2",
+        "@astrojs/starlight": "^0.38.3",
+        "@pagefind/default-ui": "^1.3.0",
+        "@ventostack/ai": "workspace:*",
+        "astro": "^6.0.0",
+        "sharp": "^0.32.5",
+        "wrangler": "^4.84.1",
+      },
+      "devDependencies": {
+        "@astrojs/node": "^10.0.6",
+      },
+    },
+    "apps/example": {
+      "name": "ventostack-example",
       "version": "0.1.0",
       "dependencies": {
         "@ventostack/auth": "workspace:*",
@@ -230,11 +92,255 @@
         "@ventostack/database": "workspace:*",
         "@ventostack/events": "workspace:*",
         "@ventostack/observability": "workspace:*",
-        "@ventostack/openapi": "workspace:*",
-        "@ventostack/system": "workspace:*",
       },
       "devDependencies": {
-        "typescript": "~6.0.2",
+        "@ventostack/testing": "workspace:*",
+        "bun-types": "latest",
+      },
+    },
+    "packages/framework/cache": {
+      "name": "@ventostack/cache",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/framework/cli": {
+      "name": "@ventostack/cli",
+      "version": "0.1.0",
+      "bin": {
+        "ventostack": "src/index.ts",
+      },
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/framework/core": {
+      "name": "@ventostack/core",
+      "version": "0.1.0",
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/framework/database": {
+      "name": "@ventostack/database",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/framework/events": {
+      "name": "@ventostack/events",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/framework/observability": {
+      "name": "@ventostack/observability",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/framework/openapi": {
+      "name": "@ventostack/openapi",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
+    "packages/framework/testing": {
+      "name": "@ventostack/testing",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/framework/webhook": {
+      "name": "@ventostack/webhook",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/platform/ai": {
+      "name": "@ventostack/ai",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/core": "workspace:*",
+        "ajv": "^8.18.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
+    "packages/platform/auth": {
+      "name": "@ventostack/auth",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/cache": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/platform/boot": {
+      "name": "@ventostack/boot",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/cache": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+        "@ventostack/events": "workspace:*",
+        "@ventostack/gen": "workspace:*",
+        "@ventostack/i18n": "workspace:*",
+        "@ventostack/monitor": "workspace:*",
+        "@ventostack/notification": "workspace:*",
+        "@ventostack/observability": "workspace:*",
+        "@ventostack/oss": "workspace:*",
+        "@ventostack/scheduler": "workspace:*",
+        "@ventostack/system": "workspace:*",
+        "@ventostack/workflow": "workspace:*",
+      },
+    },
+    "packages/platform/gen": {
+      "name": "@ventostack/gen",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+      },
+      "devDependencies": {
+        "@ventostack/testing": "workspace:*",
+      },
+    },
+    "packages/platform/i18n": {
+      "name": "@ventostack/i18n",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+      },
+      "devDependencies": {
+        "@ventostack/testing": "workspace:*",
+      },
+    },
+    "packages/platform/integration": {
+      "name": "@ventostack/integration",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/webhook": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+      },
+    },
+    "packages/platform/monitor": {
+      "name": "@ventostack/monitor",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+        "@ventostack/observability": "workspace:*",
+      },
+      "devDependencies": {
+        "@ventostack/testing": "workspace:*",
+      },
+    },
+    "packages/platform/notification": {
+      "name": "@ventostack/notification",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+      },
+      "devDependencies": {
+        "@ventostack/testing": "workspace:*",
+      },
+    },
+    "packages/platform/oss": {
+      "name": "@ventostack/oss",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+      },
+      "devDependencies": {
+        "@ventostack/testing": "workspace:*",
+      },
+    },
+    "packages/platform/scheduler": {
+      "name": "@ventostack/scheduler",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+        "@ventostack/events": "workspace:*",
+      },
+      "devDependencies": {
+        "@ventostack/testing": "workspace:*",
+      },
+    },
+    "packages/platform/system": {
+      "name": "@ventostack/system",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/cache": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+        "@ventostack/events": "workspace:*",
+        "@ventostack/observability": "workspace:*",
+      },
+      "devDependencies": {
+        "@ventostack/testing": "workspace:*",
+      },
+    },
+    "packages/platform/workflow": {
+      "name": "@ventostack/workflow",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ventostack/auth": "workspace:*",
+        "@ventostack/core": "workspace:*",
+        "@ventostack/database": "workspace:*",
+      },
+      "devDependencies": {
+        "@ventostack/testing": "workspace:*",
       },
     },
   },
@@ -1000,37 +1106,53 @@
 
     "@upsetjs/venn.js": ["@upsetjs/venn.js@2.0.0", "", { "optionalDependencies": { "d3-selection": "^3.0.0", "d3-transition": "^3.0.1" } }, "sha512-WbBhLrooyePuQ1VZxrJjtLvTc4NVfpOyKx0sKqioq9bX1C1m7Jgykkn8gLrtwumBioXIqam8DLxp88Adbue6Hw=="],
 
-    "@ventostack/admin": ["@ventostack/admin@workspace:platform/admin"],
+    "@ventostack/admin": ["@ventostack/admin@workspace:apps/admin/web"],
 
-    "@ventostack/ai": ["@ventostack/ai@workspace:packages/ai"],
+    "@ventostack/ai": ["@ventostack/ai@workspace:packages/platform/ai"],
 
-    "@ventostack/auth": ["@ventostack/auth@workspace:packages/auth"],
+    "@ventostack/auth": ["@ventostack/auth@workspace:packages/platform/auth"],
 
-    "@ventostack/backend": ["@ventostack/backend@workspace:platform/backend"],
+    "@ventostack/backend": ["@ventostack/backend@workspace:apps/admin/api"],
 
-    "@ventostack/cache": ["@ventostack/cache@workspace:packages/cache"],
+    "@ventostack/boot": ["@ventostack/boot@workspace:packages/platform/boot"],
 
-    "@ventostack/cli": ["@ventostack/cli@workspace:packages/cli"],
+    "@ventostack/cache": ["@ventostack/cache@workspace:packages/framework/cache"],
 
-    "@ventostack/core": ["@ventostack/core@workspace:packages/core"],
+    "@ventostack/cli": ["@ventostack/cli@workspace:packages/framework/cli"],
 
-    "@ventostack/database": ["@ventostack/database@workspace:packages/database"],
+    "@ventostack/core": ["@ventostack/core@workspace:packages/framework/core"],
+
+    "@ventostack/database": ["@ventostack/database@workspace:packages/framework/database"],
 
     "@ventostack/docs": ["@ventostack/docs@workspace:apps/docs"],
 
-    "@ventostack/events": ["@ventostack/events@workspace:packages/events"],
+    "@ventostack/events": ["@ventostack/events@workspace:packages/framework/events"],
 
-    "@ventostack/integration": ["@ventostack/integration@workspace:packages/integration"],
+    "@ventostack/gen": ["@ventostack/gen@workspace:packages/platform/gen"],
 
-    "@ventostack/observability": ["@ventostack/observability@workspace:packages/observability"],
+    "@ventostack/i18n": ["@ventostack/i18n@workspace:packages/platform/i18n"],
 
-    "@ventostack/openapi": ["@ventostack/openapi@workspace:packages/openapi"],
+    "@ventostack/integration": ["@ventostack/integration@workspace:packages/platform/integration"],
+
+    "@ventostack/monitor": ["@ventostack/monitor@workspace:packages/platform/monitor"],
+
+    "@ventostack/notification": ["@ventostack/notification@workspace:packages/platform/notification"],
+
+    "@ventostack/observability": ["@ventostack/observability@workspace:packages/framework/observability"],
+
+    "@ventostack/openapi": ["@ventostack/openapi@workspace:packages/framework/openapi"],
+
+    "@ventostack/oss": ["@ventostack/oss@workspace:packages/platform/oss"],
+
+    "@ventostack/scheduler": ["@ventostack/scheduler@workspace:packages/platform/scheduler"],
 
     "@ventostack/system": ["@ventostack/system@workspace:packages/platform/system"],
 
-    "@ventostack/testing": ["@ventostack/testing@workspace:packages/testing"],
+    "@ventostack/testing": ["@ventostack/testing@workspace:packages/framework/testing"],
 
-    "@ventostack/webhook": ["@ventostack/webhook@workspace:packages/webhook"],
+    "@ventostack/webhook": ["@ventostack/webhook@workspace:packages/framework/webhook"],
+
+    "@ventostack/workflow": ["@ventostack/workflow@workspace:packages/platform/workflow"],
 
     "@vitejs/plugin-react-swc": ["@vitejs/plugin-react-swc@4.3.0", "", { "dependencies": { "@rolldown/pluginutils": "1.0.0-rc.7", "@swc/core": "^1.15.11" }, "peerDependencies": { "vite": "^4 || ^5 || ^6 || ^7 || ^8" } }, "sha512-mOkXCII839dHyAt/gpoSlm28JIVDwhZ6tnG6wJxUy2bmOx7UaPjvOyIDf3SFv5s7Eo7HVaq6kRcu6YMEzt5Z7w=="],
 
