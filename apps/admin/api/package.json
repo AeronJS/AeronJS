@@ -10,12 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ventostack/auth": "workspace:*",
+    "@ventostack/cache": "workspace:*",
     "@ventostack/core": "workspace:*",
     "@ventostack/database": "workspace:*",
-    "@ventostack/cache": "workspace:*",
-    "@ventostack/auth": "workspace:*",
-    "@ventostack/observability": "workspace:*",
     "@ventostack/events": "workspace:*",
+    "@ventostack/observability": "workspace:*",
     "@ventostack/openapi": "workspace:*",
     "@ventostack/system": "workspace:*"
   },

@@ -27,7 +27,7 @@ export interface EnvVars {
 
 const DEFAULTS: Partial<Record<keyof EnvVars, string>> = {
   NODE_ENV: "development",
-  PORT: "8080",
+  PORT: "9320",
   HOST: "0.0.0.0",
   LOG_LEVEL: "info",
   CACHE_DRIVER: "memory",

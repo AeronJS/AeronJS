@@ -58,7 +58,7 @@ export async function buildApp(): Promise<AppContext> {
   await runSeeds(executor);
 
   // 1d. 缓存
-  const cache: Cache = createCacheInstance();
+  const cache: Cache = await createCacheInstance();
 
   // 1e. 审计日志
   const auditLog: AuditStore = createAppAuditLog();
