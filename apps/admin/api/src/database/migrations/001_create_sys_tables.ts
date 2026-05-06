@@ -206,6 +206,7 @@ export const createSysTables: Migration = {
         os VARCHAR(64),
         status INT DEFAULT 0,
         message VARCHAR(512),
+        login_method VARCHAR(32) DEFAULT 'password',
         login_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )

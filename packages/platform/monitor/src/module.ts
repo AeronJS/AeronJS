@@ -3,10 +3,11 @@
  */
 
 import type { JWTManager, RBAC } from "@ventostack/auth";
-import type { Router } from "@ventostack/core";
+import type { Router, Middleware } from "@ventostack/core";
 import type { HealthCheck } from "@ventostack/observability";
+import type { SqlExecutor } from "@ventostack/database";
 import { createMonitorService } from "./services/monitor";
-import type { MonitorService, CacheStats, DataSourceStatus } from "./services/monitor";
+import type { MonitorService, CacheStatus, DataSourceStatus } from "./services/monitor";
 import { createMonitorRoutes } from "./routes/monitor";
 import { createAuthMiddleware } from "./middlewares/auth-guard";
 
@@ -23,18 +24,19 @@ export interface MonitorModuleDeps {
   jwt: JWTManager;
   jwtSecret: string;
   rbac?: RBAC;
-  cacheStatsProvider?: () => Promise<CacheStats>;
+  executor?: SqlExecutor;
+  cacheStatsProvider?: () => Promise<CacheStatus>;
   dataSourceStatsProvider?: () => Promise<DataSourceStatus>;
 }
 
 export function createMonitorModule(deps: MonitorModuleDeps): MonitorModule {
-  const { healthCheck, jwt, jwtSecret, rbac, cacheStatsProvider, dataSourceStatsProvider } = deps;
+  const { healthCheck, jwt, jwtSecret, rbac, executor, cacheStatsProvider, dataSourceStatsProvider } = deps;
 
-  const monitorService = createMonitorService({ healthCheck, cacheStatsProvider, dataSourceStatsProvider });
+  const monitorService = createMonitorService({ healthCheck, executor, cacheStatsProvider, dataSourceStatsProvider });
   const authMiddleware = createAuthMiddleware(jwt, jwtSecret);
 
-  const perm = (resource: string, action: string) => {
-    return async (ctx: any, next: any) => {
+  const perm = (resource: string, action: string): Middleware => {
+    return async (ctx, next) => {
       const user = ctx.user as { roles: string[] } | undefined;
       if (!user) {
         return new Response(JSON.stringify({ code: 401, message: "Not authenticated" }), { status: 401, headers: { "Content-Type": "application/json" } });
@@ -49,7 +51,7 @@ export function createMonitorModule(deps: MonitorModuleDeps): MonitorModule {
     };
   };
 
-  const router = createMonitorRoutes(monitorService, authMiddleware, perm as any);
+  const router = createMonitorRoutes(monitorService, authMiddleware, perm);
 
   return {
     services: { monitor: monitorService },

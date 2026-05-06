@@ -16,28 +16,42 @@ export function createMonitorRoutes(
   router.use(authMiddleware);
 
   // 服务器状态
-  router.get("/api/monitor/server", perm("monitor", "server:query"), async () => {
+  router.get("/api/system/monitor/server", async () => {
     const status = await monitorService.getServerStatus();
     return ok(status);
-  });
+  }, perm("system", "monitor:list"));
 
   // 缓存统计
-  router.get("/api/monitor/cache", perm("monitor", "cache:query"), async () => {
+  router.get("/api/system/monitor/cache", async () => {
     const stats = await monitorService.getCacheStats();
     return ok(stats);
-  });
+  }, perm("system", "monitor:list"));
 
   // 数据源状态
-  router.get("/api/monitor/datasource", perm("monitor", "datasource:query"), async () => {
+  router.get("/api/system/monitor/datasource", async () => {
     const status = await monitorService.getDataSourceStatus();
     return ok(status);
-  });
+  }, perm("system", "monitor:list"));
 
   // 健康检查
-  router.get("/api/monitor/health", async () => {
+  router.get("/api/system/monitor/health", async () => {
     const health = await monitorService.getHealthStatus();
     return ok(health);
-  });
+  }, perm("system", "monitor:list"));
+
+  // 在线用户列表
+  router.get("/api/system/monitor/online", async () => {
+    const users = await monitorService.getOnlineUsers();
+    return ok(users);
+  }, perm("system", "online:list"));
+
+  // 强制下线
+  router.delete("/api/system/monitor/online/:sessionId", async (ctx) => {
+    const sessionId = (ctx.params as Record<string, string>).sessionId!;
+    const userId = ctx.query?.userId as string | undefined;
+    await monitorService.forceLogout(sessionId, userId ?? "");
+    return ok(null);
+  }, perm("system", "online:forceLogout"));
 
   return router;
 }

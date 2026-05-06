@@ -10,7 +10,7 @@
  * 依赖方向：infra → auth → system → app → entry
  */
 
-import { createApp, createRouter, requestId, requestLogger, errorHandler, cors } from "@ventostack/core";
+import { createApp, createRouter, requestId, requestLogger, errorHandler, cors, createTagLogger } from "@ventostack/core";
 import type { VentoStackApp } from "@ventostack/core";
 import { setupOpenAPI } from "@ventostack/openapi";
 import { getDefaultLogger } from "@ventostack/observability";
@@ -23,6 +23,7 @@ import type { DatabaseContext } from "./database";
 import { createCacheInstance, type CacheInstance } from "./cache";
 import { assembleAuthEngines } from "./auth";
 import { assembleSystemModule } from "./system";
+import { createMonitorModule } from "@ventostack/monitor";
 
 export interface AppContext {
   /** VentoStack 应用实例 */
@@ -42,19 +43,18 @@ export async function buildApp(): Promise<AppContext> {
   // =============================================
   // 1. 基础设施层
   // =============================================
-
-  const logger: Logger = getDefaultLogger({ level: env.LOG_LEVEL });
-  logger.info("[app] Starting mode", { env: env.NODE_ENV });
+  const logger = createTagLogger('app')
+  logger.info(`Starting mode: ${env.NODE_ENV }`);
 
   // 1a. 数据库
   const database = createDatabaseConnection();
   const { executor } = database;
-  logger.info("[app] Database connected");
+  logger.info("Database connected");
 
-  // 1b. 运行迁移
-  await runMigrations(executor);
+  // 1b. 运行迁移（使用单连接 executor）
+  await runMigrations(database.migrationExecutor);
 
-  // 1c. 种子数据
+  // 1c. 种子数据（使用连接池 executor）
   await runSeeds(executor);
 
   // 1d. 缓存
@@ -83,6 +83,15 @@ export async function buildApp(): Promise<AppContext> {
 
   // 3a. 加载权限
   await system.init();
+
+  // 3b. 监控模块
+  const monitor = createMonitorModule({
+    healthCheck,
+    jwt: auth.jwt,
+    jwtSecret: auth.jwtSecret,
+    rbac: auth.rbac,
+    executor,
+  });
 
   // =============================================
   // 4. 应用装配
@@ -122,6 +131,9 @@ export async function buildApp(): Promise<AppContext> {
 
   // 4d. 系统模块路由
   app.use(system.router);
+
+  // 4e. 监控模块路由
+  app.use(monitor.router);
 
   // 4e. 注册优雅关停回调（框架收到 SIGTERM/SIGINT 时自动调用）
   app.lifecycle.onBeforeStop(async () => {

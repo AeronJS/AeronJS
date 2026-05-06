@@ -34,12 +34,6 @@ async function main(): Promise<void> {
   // 5. process.exit(0)
   await appCtx.app.listen();
 
-  log.info(`Listening on http://${env.HOST}:${env.PORT}`);
-  log.info(`Environment: ${env.NODE_ENV}`);
-  log.info(`API:       http://${env.HOST}:${env.PORT}/api`);
-  log.info(`OpenAPI:   http://${env.HOST}:${env.PORT}/openapi.json`);
-  log.info(`Docs:      http://${env.HOST}:${env.PORT}/docs\n`);
-
   // 后端启动后自动生成前端 SDK 类型（仅开发模式）
   if (env.NODE_ENV !== "production") {
     const webDir = import.meta.dir.replace("/apps/admin/api/src", "/apps/admin/web");

@@ -21,6 +21,7 @@
         "@ventostack/core": "workspace:*",
         "@ventostack/database": "workspace:*",
         "@ventostack/events": "workspace:*",
+        "@ventostack/monitor": "workspace:*",
         "@ventostack/observability": "workspace:*",
         "@ventostack/openapi": "workspace:*",
         "@ventostack/system": "workspace:*",

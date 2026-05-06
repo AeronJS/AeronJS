@@ -46,6 +46,11 @@ const rawConfig = createConfig({
     options: ["memory", "redis"],
   },
   REDIS_URL: { type: "string", env: "REDIS_URL" },
+  DB_POOL_SIZE: {
+    type: "number",
+    env: "DB_POOL_SIZE",
+    default: 10,
+  },
   SESSION_TTL_SECONDS: {
     type: "number",
     env: "SESSION_TTL_SECONDS",
