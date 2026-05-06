@@ -56,6 +56,7 @@ const RolePage = () => {
   const [menuTree, setMenuTree] = useState<MenuItem[]>([])
   const [checkedKeys, setCheckedKeys] = useState<string[]>([])
   const [assignRoleId, setAssignRoleId] = useState('')
+  const [assignRoleCode, setAssignRoleCode] = useState('')
 
   const handleSearch = () => {
     const values = searchForm.getFieldsValue()
@@ -91,9 +92,12 @@ const RolePage = () => {
 
   const openAssignMenus = async (r: RoleItem) => {
     setAssignRoleId(r.id)
+    setAssignRoleCode(r.code)
     const res = await client.get('/api/system/menus/tree') as { error?: unknown; data?: MenuItem[] }
-    setMenuTree(res.data ?? [])
-    setCheckedKeys([])
+    const tree = res.data ?? []
+    setMenuTree(tree)
+    // admin 角色默认全选
+    setCheckedKeys(isBuiltInRole(r.code) ? collectAllKeys(tree) : [])
     setMenuModalOpen(true)
   }
 
@@ -117,6 +121,8 @@ const RolePage = () => {
     if (!error) { message.success('菜单权限分配成功'); setMenuModalOpen(false) }
   }
 
+  const isBuiltInRole = (code: string) => code === 'admin'
+
   const columns: ColumnsType<RoleItem> = [
     { title: '角色名称', dataIndex: 'name', key: 'name', width: 160 },
     { title: '角色标识', dataIndex: 'code', key: 'code', width: 160 },
@@ -126,13 +132,16 @@ const RolePage = () => {
     { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
     { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180, render: (_: unknown, r: RoleItem) => fmtDate(r.createdAt) },
     { title: '操作', key: 'action', width: 160, fixed: 'right' as const,
-      render: (_: unknown, r: RoleItem) => (
-        <ActionColumn items={[
-          { label: '编辑', onClick: () => openEdit(r) },
-          { label: '分配菜单', onClick: () => openAssignMenus(r) },
-          { label: '删除', onClick: () => handleDelete(r.id), danger: true, confirm: '确定删除该角色？' },
-        ]} />
-      ) },
+      render: (_: unknown, r: RoleItem) => {
+        const builtIn = isBuiltInRole(r.code)
+        return (
+          <ActionColumn items={[
+            { label: '编辑', onClick: () => openEdit(r), disabled: builtIn },
+            { label: '分配菜单', onClick: () => openAssignMenus(r) },
+            { label: '删除', onClick: () => handleDelete(r.id), danger: true, confirm: '确定删除该角色？', disabled: builtIn },
+          ]} />
+        )
+      } },
   ]
 
   return (
@@ -176,13 +185,15 @@ const RolePage = () => {
           </Row>
         </Form>
       </Modal>
-      <Modal title="分配菜单权限" open={menuModalOpen} onOk={handleAssignMenus} onCancel={() => setMenuModalOpen(false)} destroyOnHidden width={480}>
+      <Modal title="分配菜单权限" open={menuModalOpen} onOk={isBuiltInRole(assignRoleCode) ? () => setMenuModalOpen(false) : handleAssignMenus} onCancel={() => setMenuModalOpen(false)} okText={isBuiltInRole(assignRoleCode) ? '关闭' : '确定'} destroyOnHidden width={480}>
+        {isBuiltInRole(assignRoleCode) && <p className="text-gray-500 mb-2">内置超级管理员角色拥有所有权限</p>}
         {menuTree.length > 0 && (
           <Tree
             checkable
             defaultExpandAll
             checkedKeys={checkedKeys}
-            onCheck={handleCheck}
+            onCheck={isBuiltInRole(assignRoleCode) ? () => {} : handleCheck}
+            selectable={false}
             treeData={toTreeData(menuTree)}
           />
         )}
