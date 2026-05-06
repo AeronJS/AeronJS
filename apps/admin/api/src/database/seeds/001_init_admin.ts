@@ -9,6 +9,12 @@ export const initAdminSeed: Seed = {
   name: '001_init_admin',
 
   async run(executor) {
+    // 幂等检查：admin 角色已存在则跳过
+    const existingRole = await executor(`SELECT id FROM sys_role WHERE code = 'admin'`);
+    if ((existingRole as unknown[]).length > 0) {
+      return;
+    }
+
     const adminUserId = generateUUID();
     const adminRoleId = generateUUID();
 
